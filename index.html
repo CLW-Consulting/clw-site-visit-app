@@ -234,7 +234,13 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 /* ── Utility ── */
 .hide{display:none!important}
-@media(max-width:600px){.fgrid{grid-template-columns:1fr}.fgrid .full{grid-column:1}.proj-meta-grid{grid-template-columns:1fr}.app-hdr{flex-wrap:wrap}.inline-plan-hdr{flex-direction:column;align-items:flex-start}}
+@media(max-width:600px){.fgrid{grid-template-columns:1fr}.fgrid .full{grid-column:1}.proj-meta-grid{grid-template-columns:1fr}.app-hdr{flex-wrap:wrap}.inline-plan-hdr{flex-direction:column;align-items:flex-start}
+/* Visit screen: title gets its own full-width line */
+#screen-visit .hdr-l{flex-wrap:wrap;flex-basis:100%}
+#visit-hdr-title{flex-basis:100%;white-space:normal;max-width:none;overflow:visible;font-size:13px;margin-top:4px;line-height:1.3}
+[contenteditable]#visit-hdr-title{max-width:none}
+#screen-visit .gen-btn{flex:1;min-width:0;font-size:11px;padding:7px 8px;gap:4px}
+#screen-visit #sync-status-v{font-size:10px}}
 </style>
 </head>
 <body>
@@ -33987,8 +33993,8 @@ function renderAll(){
 
 function rPhotos(iss){
   const pp=pins.filter(p=>p.issueId===iss.id&&p.type==='photo'&&p.photo?.du);
-  // Photos that have been retrospectively pinned — suppress the drag-drop copy
-  const pinnedPhotoIds=new Set(pp.filter(p=>p.sourcePhotoId!=null).map(p=>p.sourcePhotoId));
+  // Suppress drag-drop photos that have been pinned to ANY issue (even if the pin was later moved)
+  const pinnedPhotoIds=new Set(pins.filter(p=>p.sourcePhotoId!=null&&iss.photos.some(ph=>ph.id===p.sourcePhotoId)).map(p=>p.sourcePhotoId));
   const unpinnedPhotos=iss.photos.filter(ph=>!pinnedPhotoIds.has(ph.id));
   if(!unpinnedPhotos.length&&!pp.length)return'';
   return`<div class="pg">${unpinnedPhotos.map(ph=>`
@@ -33996,7 +34002,6 @@ function rPhotos(iss){
       <img class="pt" src="${ph.du}" alt="">
       <div class="pf">
         <input class="pci" value="${e(ph.cap)}" placeholder="Caption…" oninput="ph_c(${iss.id},${ph.id},this.value)">
-        <div class="sr"><span>Width</span><input type="range" min="20" max="100" value="${ph.wp}" oninput="ph_s(${iss.id},${ph.id},this.value);this.nextElementSibling.textContent=this.value+'%'"><span class="sv">${ph.wp}%</span></div>
         ${plans.length?`<button class="pd pd-pin" onclick="pinPhotoToMap(${iss.id},${ph.id})">📍 Pin to Plan</button>`:''}
         <button class="pd" onclick="delPh(${iss.id},${ph.id})">✕ Remove</button>
       </div>
@@ -34805,18 +34810,27 @@ function _applyInlineCrop(canvas,start,end){
 document.addEventListener('DOMContentLoaded',()=>{
   const ic=document.getElementById('inline-plan-canvas');
   if(!ic)return;
+
+  // Helper: get position relative to canvas from any event (mouse or touch)
+  function _icPos(ev){
+    const r=ic.getBoundingClientRect();
+    const src=ev.touches?ev.touches[0]:ev;
+    return{x:src.clientX-r.left,y:src.clientY-r.top};
+  }
+
+  // Mouse events
   ic.addEventListener('mousedown',ev=>{
     if(!_inlineCropMode)return;
-    _icDragging=true;_icStart={x:ev.offsetX,y:ev.offsetY};
+    _icDragging=true;_icStart=_icPos(ev);
   });
   ic.addEventListener('mousemove',ev=>{
     if(!_inlineCropMode||!_icDragging||!_icStart)return;
-    _drawInlineCropOverlay(ic,_icStart,{x:ev.offsetX,y:ev.offsetY});
+    _drawInlineCropOverlay(ic,_icStart,_icPos(ev));
   });
   ic.addEventListener('mouseup',ev=>{
     if(!_inlineCropMode||!_icDragging||!_icStart)return;
     _icDragging=false;
-    const end={x:ev.offsetX,y:ev.offsetY};
+    const end=_icPos(ev);
     if(Math.abs(end.x-_icStart.x)<12||Math.abs(end.y-_icStart.y)<12){_cancelInlineCrop();return;}
     _applyInlineCrop(ic,_icStart,end);
     _icStart=null;
@@ -34824,6 +34838,31 @@ document.addEventListener('DOMContentLoaded',()=>{
   ic.addEventListener('mouseleave',()=>{
     if(_inlineCropMode&&_icDragging){_icDragging=false;_icStart=null;_cancelInlineCrop();}
   });
+
+  // Touch events (iPhone/iPad)
+  ic.addEventListener('touchstart',ev=>{
+    if(!_inlineCropMode)return;
+    ev.preventDefault();
+    _icDragging=true;_icStart=_icPos(ev);
+  },{passive:false});
+  ic.addEventListener('touchmove',ev=>{
+    if(!_inlineCropMode||!_icDragging||!_icStart)return;
+    ev.preventDefault();
+    const pos={x:ev.touches[0].clientX-ic.getBoundingClientRect().left,y:ev.touches[0].clientY-ic.getBoundingClientRect().top};
+    _drawInlineCropOverlay(ic,_icStart,pos);
+  },{passive:false});
+  ic.addEventListener('touchend',ev=>{
+    if(!_inlineCropMode||!_icDragging||!_icStart)return;
+    ev.preventDefault();
+    _icDragging=false;
+    const t=ev.changedTouches[0];
+    const r=ic.getBoundingClientRect();
+    const end={x:t.clientX-r.left,y:t.clientY-r.top};
+    if(Math.abs(end.x-_icStart.x)<12||Math.abs(end.y-_icStart.y)<12){_cancelInlineCrop();return;}
+    _applyInlineCrop(ic,_icStart,end);
+    _icStart=null;
+  },{passive:false});
+
   // Escape key cancels crop mode
   document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&_inlineCropMode)_cancelInlineCrop();});
 });
@@ -34982,7 +35021,7 @@ async function _gen(){
   const addPhotoBlock=(ph)=>{
     const isPort=ph.nW&&ph.nH&&ph.nH>ph.nW;
     let tH,tW;
-    if(ph.nW&&ph.nH){tH=isPort?PORT_H:TARGET_H;tW=Math.round(tH*(ph.nW/ph.nH));if(tW>CPX){tW=CPX;tH=Math.round(tW*(ph.nH/ph.nW));}}
+    if(ph.nW&&ph.nH){tH=PORT_H;tW=Math.round(tH*(ph.nW/ph.nH));if(tW>CPX){tW=CPX;tH=Math.round(tW*(ph.nH/ph.nW));}}
     else{tW=Math.round(CPX*0.7);tH=Math.round(tW*0.75);}
     const buf=duBuf(ph.du);let tp=ph.tp||'jpeg';
     if(tp==='jpg')tp='jpeg';if(!['png','jpeg','gif','bmp'].includes(tp))tp='jpeg';
@@ -35001,8 +35040,9 @@ async function _gen(){
     children.push(new Paragraph({numbering:{reference:'issue-list',level:0},children:[new TextRun({text:iss.title||'',font:'Mulish',bold:true,size:22,color:DARK})],...sp(160,80)}));
     children.push(...bLines(iss.desc));
 
-    // Drag-drop photos
-    const validPh=iss.photos.filter(p=>p.du);
+    // Drag-drop photos — exclude any that have been pinned (even if pin was moved to another issue)
+    const _pinnedSrcIds=new Set(pins.filter(p=>p.sourcePhotoId!=null&&iss.photos.some(ph=>ph.id===p.sourcePhotoId)).map(p=>p.sourcePhotoId));
+    const validPh=iss.photos.filter(p=>p.du&&!_pinnedSrcIds.has(p.id));
     let pi=0;
     while(pi<validPh.length){
       const ph=validPh[pi];
