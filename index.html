@@ -302,6 +302,7 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
     </div>
     <div id="sync-status-v" class="sync-status sync-saved">● Saved</div>
     <button class="gen-btn" onclick="openReviewScreen()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none"><span>📷</span> Review Photos</button>
+    <button class="gen-btn" id="dl-photos-btn" onclick="downloadAllPhotos()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none"><span>⬇️</span> Download Photos</button>
     <button class="gen-btn" id="gen-btn" onclick="generateReport()"><span>📄</span> Generate Word Report</button>
   </div>
   <div class="main">
@@ -33980,12 +33981,14 @@ function renderAll(){
       </div>
       ${rPhotos(iss)}
       <div class="photo-btns">
-        <div class="dz" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
+        <div class="dz" style="flex:1" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
           ondrop="event.preventDefault();this.classList.remove('over');addFs(${iss.id},event.dataTransfer.files)"
           onclick="document.getElementById('fi${iss.id}').click()">
           <input type="file" id="fi${iss.id}" accept="image/*" multiple style="display:none" onchange="addFs(${iss.id},this.files);this.value=''">
-          <div class="dz-inner"><span class="dz-icon">📷</span><span class="dz-txt"><strong>Click or drag</strong> to add photos</span></div>
+          <div class="dz-inner"><span class="dz-icon">🖼️</span><span class="dz-txt"><strong>Click or drag</strong> photos</span></div>
         </div>
+        <input type="file" id="fic${iss.id}" accept="image/*" capture="environment" style="display:none" onchange="addFsCamera(${iss.id},this.files);this.value=''">
+        <button class="photo-btn pin-btn" style="flex:0 0 auto;padding:10px 14px" onclick="document.getElementById('fic${iss.id}').click()">📷 Take Photo</button>
       </div>
     </div>
   </div>`).join('');
@@ -35396,6 +35399,64 @@ function _rvProg() {
 }
 
 function closeReviewScreen() { showScreen('visit'); }
+
+// ── Camera capture: add to app + try to save to iOS photo library ────────────
+function addFsCamera(iid, files) {
+  if (!files || !files.length) return;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    // Web Share API (iOS 15+): opens native share sheet so user can tap "Save Image"
+    Array.from(files).forEach(f => {
+      if (navigator.canShare && navigator.canShare({ files: [f] })) {
+        navigator.share({ files: [f], title: 'Site Photo' }).catch(() => {});
+      }
+    });
+  }
+  // Android: camera app auto-saves to gallery — nothing extra needed
+  addFs(iid, files);
+}
+
+// ── Download all photos as ZIP, named Issue 1-001, Issue 2-001 etc. ──────────
+async function downloadAllPhotos() {
+  const btn = document.getElementById('dl-photos-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span> Preparing…'; }
+  try {
+    const zip = new JSZip();
+    let total = 0;
+    issues.forEach((iss, idx) => {
+      const issNum = idx + 1;
+      // Exclude photos that have been pinned (they'll appear via pin)
+      const pinnedIds = new Set(
+        pins.filter(p => p.sourcePhotoId != null && iss.photos.some(ph => ph.id === p.sourcePhotoId))
+            .map(p => p.sourcePhotoId)
+      );
+      const unpinned = iss.photos.filter(ph => !pinnedIds.has(ph.id));
+      const issuePins = pins.filter(p => p.issueId === iss.id && p.type === 'photo' && p.photo?.du);
+      let n = 1;
+      [...unpinned, ...issuePins.map(p => p.photo)].forEach(ph => {
+        if (!ph?.du) return;
+        const ext = (ph.tp || 'jpeg').replace('jpg', 'jpeg');
+        const filename = `Issue ${issNum}-${String(n).padStart(3, '0')}.${ext}`;
+        const b64 = ph.du.split(',')[1];
+        if (b64) { zip.file(filename, b64, { base64: true }); total++; n++; }
+      });
+    });
+    if (!total) { toast('No photos to download'); return; }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const projTitle = document.getElementById('project-hdr-title')?.textContent?.trim() || 'Site Visit';
+    a.download = `${projTitle} – Photos.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(`✓ ${total} photo${total > 1 ? 's' : ''} downloaded`);
+  } catch (ex) {
+    toast('Download error: ' + ex.message, 5000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>⬇️</span> Download Photos'; }
+  }
+}
 
 </script>
 
