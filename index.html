@@ -232,6 +232,14 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 .rb.on{display:flex}
 .rd{width:9px;height:9px;border-radius:50%;background:white;animation:blink .9s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+/* ── Lightbox ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+.lightbox-img-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden}
+.lightbox img{max-width:96vw;max-height:92vh;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,.6);transform-origin:center center;user-select:none;-webkit-user-drag:none;will-change:transform}
+.lightbox-close{position:fixed;top:16px;right:18px;color:white;font-size:28px;font-weight:800;cursor:pointer;line-height:1;opacity:.8;transition:opacity .15s;z-index:2001}
+.lightbox-close:hover{opacity:1}
+.lightbox-hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.55);font-size:12px;font-weight:700;pointer-events:none;white-space:nowrap}
+.pt{cursor:zoom-in}
 /* ── Utility ── */
 .hide{display:none!important}
 @media(max-width:600px){.fgrid{grid-template-columns:1fr}.fgrid .full{grid-column:1}.proj-meta-grid{grid-template-columns:1fr}.app-hdr{flex-wrap:wrap}.inline-plan-hdr{flex-direction:column;align-items:flex-start}
@@ -478,6 +486,13 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 <input type="file" id="pin-photo-input" accept="image/*" capture="environment" style="display:none" onchange="onPinPhotoSelected(event)">
 <input type="file" id="pin-photo-input-add" accept="image/*" style="display:none" onchange="onPinPhotoSelected(event)">
 <div class="toast" id="toast"></div>
+<div class="lightbox" id="lightbox" style="display:none">
+  <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+  <div class="lightbox-img-wrap" id="lightbox-wrap">
+    <img id="lightbox-img" src="" alt="" draggable="false">
+  </div>
+  <div class="lightbox-hint" id="lightbox-hint">Scroll or pinch to zoom · Drag to pan · Double-tap to reset</div>
+</div>
 <div class="rb" id="rb"><span class="rd"></span> Recording…</div>
 
 
@@ -34002,7 +34017,7 @@ function rPhotos(iss){
   if(!unpinnedPhotos.length&&!pp.length)return'';
   return`<div class="pg">${unpinnedPhotos.map(ph=>`
     <div class="pc2">
-      <img class="pt" src="${ph.du}" alt="">
+      <img class="pt" src="${ph.du}" alt="" onclick="openLightbox(this.src)">
       <div class="pf">
         <input class="pci" value="${e(ph.cap)}" placeholder="Caption…" oninput="ph_c(${iss.id},${ph.id},this.value)">
         ${plans.length?`<button class="pd pd-pin" onclick="pinPhotoToMap(${iss.id},${ph.id})">📍 Pin to Plan</button>`:''}
@@ -34011,7 +34026,7 @@ function rPhotos(iss){
     </div>`).join('')}
   ${pp.map(pin=>{const pinNum=pins.filter(p=>p.planId===pin.planId).indexOf(pin)+1;return`
     <div class="pc2">
-      <img class="pt" src="${pin.photo.du}" alt="">
+      <img class="pt" src="${pin.photo.du}" alt="" onclick="openLightbox(this.src)">
       <div class="pf">
         <input class="pci" value="${e(pin.photo.cap)}" placeholder="Caption…" oninput="updatePinCap(${pin.id},this.value)">
         <div class="sr"><span style="color:#282828;font-weight:700">📍 P${pinNum}</span></div>
@@ -35399,6 +35414,152 @@ function _rvProg() {
 }
 
 function closeReviewScreen() { showScreen('visit'); }
+
+// ── Lightbox with zoom + pan ──────────────────────────────────────────────────
+(function(){
+  let _scale=1,_tx=0,_ty=0;
+  let _dragging=false,_lastX=0,_lastY=0;
+  let _pinchDist=null,_pinchScale=1,_pinchTx=0,_pinchTy=0;
+  let _lastTap=0;
+
+  function _apply(img,animated){
+    img.style.transition=animated?'transform .2s ease':'none';
+    img.style.transform=`translate(${_tx}px,${_ty}px) scale(${_scale})`;
+  }
+
+  function _clampPan(img){
+    const r=img.getBoundingClientRect();
+    const vw=window.innerWidth,vh=window.innerHeight;
+    const overX=Math.max(0,(r.width-vw)/2);
+    const overY=Math.max(0,(r.height-vh)/2);
+    _tx=Math.max(-overX,Math.min(overX,_tx));
+    _ty=Math.max(-overY,Math.min(overY,_ty));
+  }
+
+  function _reset(img,animated){
+    _scale=1;_tx=0;_ty=0;_apply(img,animated);
+  }
+
+  function _dist(t){
+    const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;
+    return Math.sqrt(dx*dx+dy*dy);
+  }
+  function _mid(t){
+    return{x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2};
+  }
+
+  window.openLightbox=function(src){
+    const lb=document.getElementById('lightbox');
+    const img=document.getElementById('lightbox-img');
+    img.src=src; _scale=1;_tx=0;_ty=0;
+    img.style.transition='none';
+    img.style.transform='';
+    lb.style.display='flex';
+    document.addEventListener('keydown',_lbKey);
+
+    // — Mouse wheel zoom —
+    lb._onWheel=function(e){
+      e.preventDefault();
+      const img=document.getElementById('lightbox-img');
+      const rect=img.getBoundingClientRect();
+      const ox=(e.clientX-rect.left-rect.width/2)/_scale;
+      const oy=(e.clientY-rect.top-rect.height/2)/_scale;
+      const delta=e.deltaY<0?1.15:1/1.15;
+      _scale=Math.max(1,Math.min(8,_scale*delta));
+      if(_scale>1){_tx+=ox*(_scale-_scale/delta);_ty+=oy*(_scale-_scale/delta);}
+      else{_tx=0;_ty=0;}
+      _clampPan(img);_apply(img,false);
+    };
+    lb.addEventListener('wheel',lb._onWheel,{passive:false});
+
+    // — Mouse drag —
+    lb._onMD=function(e){
+      if(e.target.classList.contains('lightbox-close'))return;
+      if(_scale<=1){closeLightbox();return;}
+      _dragging=true;_lastX=e.clientX;_lastY=e.clientY;
+      lb.style.cursor='grabbing';
+    };
+    lb._onMM=function(e){
+      if(!_dragging)return;
+      _tx+=e.clientX-_lastX;_ty+=e.clientY-_lastY;
+      _lastX=e.clientX;_lastY=e.clientY;
+      const img=document.getElementById('lightbox-img');
+      _clampPan(img);_apply(img,false);
+    };
+    lb._onMU=function(e){
+      if(!_dragging)return;
+      _dragging=false;lb.style.cursor='';
+    };
+    lb.addEventListener('mousedown',lb._onMD);
+    window.addEventListener('mousemove',lb._onMM);
+    window.addEventListener('mouseup',lb._onMU);
+
+    // — Touch: pinch-zoom + drag + double-tap reset —
+    lb._onTS=function(e){
+      const img=document.getElementById('lightbox-img');
+      if(e.touches.length===2){
+        e.preventDefault();
+        _pinchDist=_dist(e.touches);
+        _pinchScale=_scale;_pinchTx=_tx;_pinchTy=_ty;
+      } else if(e.touches.length===1){
+        const now=Date.now();
+        if(now-_lastTap<300){_reset(img,true);}
+        _lastTap=now;
+        _lastX=e.touches[0].clientX;_lastY=e.touches[0].clientY;
+        _pinchDist=null;
+      }
+    };
+    lb._onTM=function(e){
+      const img=document.getElementById('lightbox-img');
+      if(e.touches.length===2&&_pinchDist!==null){
+        e.preventDefault();
+        const newDist=_dist(e.touches);
+        const m=_mid(e.touches);
+        const rect=img.getBoundingClientRect();
+        const ox=(m.x-rect.left-rect.width/2)/_scale;
+        const oy=(m.y-rect.top-rect.height/2)/_scale;
+        const ratio=newDist/_pinchDist;
+        _scale=Math.max(1,Math.min(8,_pinchScale*ratio));
+        if(_scale>1){_tx=_pinchTx+ox*(_scale-_pinchScale);_ty=_pinchTy+oy*(_scale-_pinchScale);}
+        else{_tx=0;_ty=0;}
+        _clampPan(img);_apply(img,false);
+      } else if(e.touches.length===1&&_pinchDist===null&&_scale>1){
+        e.preventDefault();
+        _tx+=e.touches[0].clientX-_lastX;_ty+=e.touches[0].clientY-_lastY;
+        _lastX=e.touches[0].clientX;_lastY=e.touches[0].clientY;
+        _clampPan(img);_apply(img,false);
+      }
+    };
+    lb._onTE=function(e){if(e.touches.length<2)_pinchDist=null;};
+    lb.addEventListener('touchstart',lb._onTS,{passive:false});
+    lb.addEventListener('touchmove',lb._onTM,{passive:false});
+    lb.addEventListener('touchend',lb._onTE);
+  };
+
+  window.closeLightbox=function(){
+    const lb=document.getElementById('lightbox');
+    lb.style.display='none';
+    document.getElementById('lightbox-img').src='';
+    document.removeEventListener('keydown',_lbKey);
+    lb.removeEventListener('wheel',lb._onWheel);
+    lb.removeEventListener('mousedown',lb._onMD);
+    window.removeEventListener('mousemove',lb._onMM);
+    window.removeEventListener('mouseup',lb._onMU);
+    lb.removeEventListener('touchstart',lb._onTS);
+    lb.removeEventListener('touchmove',lb._onTM);
+    lb.removeEventListener('touchend',lb._onTE);
+    _dragging=false;_pinchDist=null;
+  };
+
+  function _lbKey(e){
+    if(e.key==='Escape')closeLightbox();
+    if(e.key==='0'||e.key==='+'){
+      const img=document.getElementById('lightbox-img');
+      if(e.key==='0'){_reset(img,true);}
+      else{_scale=Math.min(8,_scale*1.25);_clampPan(img);_apply(img,true);}
+    }
+  }
+})();
 
 // ── Camera capture: add to app + try to save to iOS photo library ────────────
 function addFsCamera(iid, files) {
