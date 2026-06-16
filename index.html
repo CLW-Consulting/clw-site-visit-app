@@ -283,7 +283,10 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
   <div class="main">
     <div class="screen-top">
       <h2 class="screen-title">Projects</h2>
-      <button class="add-btn" onclick="newProject()">+ New Project</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="add-btn" style="background:rgba(0,108,170,.12);color:var(--clw-blue);border:1.5px solid var(--clw-blue)" onclick="clwOpenDriveBrowser()">☁ Load from Drive</button>
+        <button class="add-btn" onclick="newProject()">+ New Project</button>
+      </div>
     </div>
     <div id="project-list" class="card-list"></div>
     <div id="no-projects" class="empty-state">
@@ -503,6 +506,27 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
   </div>
 </div>
 <div id="modal-backdrop" class="modal-backdrop hide" onclick="closeModal()"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOAD FROM DRIVE MODAL
+══════════════════════════════════════════════════════════ -->
+<div id="modal-drive" class="modal hide" style="max-width:500px;width:92vw">
+  <div class="modal-hdr" style="display:flex;align-items:center;justify-content:space-between">
+    <span>☁ Load Visit from Drive</span>
+    <button onclick="clwCloseDriveBrowser()" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;line-height:1;padding:0 2px">✕</button>
+  </div>
+  <div class="modal-body" style="padding:16px 20px;max-height:60vh;overflow-y:auto">
+    <p style="font-size:13px;color:var(--clw-mid);margin-bottom:14px;line-height:1.5">Fetches visits previously synced to your Google Drive so you can continue them on this device. Photos are re-imported automatically.</p>
+    <div id="drive-browser-status" style="text-align:center;padding:20px;color:var(--clw-mid);font-size:13px">
+      <button class="btn-primary" onclick="clwFetchDriveList()" style="font-size:13px;padding:10px 22px">Fetch visits from Drive</button>
+    </div>
+    <div id="drive-visit-list" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="clwCloseDriveBrowser()">Close</button>
+  </div>
+</div>
+<div id="modal-drive-backdrop" class="modal-backdrop hide" onclick="clwCloseDriveBrowser()"></div>
 
 <div id="pin-hover-tip"></div>
 <!-- Hidden inputs -->
@@ -35236,7 +35260,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
 // CONFIG: fill these in after completing the Setup Guide
 const CLW_GOOGLE = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbx2nt74u6F1JRrv5nBxY_Os6dyU288NgFjGPeBS3Cz3qaIw-9lAtXQrRDxDl0g1hi2S/exec',   // Your deployed Apps Script web app URL
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzK1dW2VvDlFcn1nIsDDmhjiYZXGwClMdiyPaPBKdbwZpyGQj8c3E8VnnmwKov8ZUU/exec',   // Your deployed Apps Script web app URL
   FOLDER_ID:  '1Cja_H_7mIF6BPPUI1D_AqIISkyh_8Wrn',   // Google Drive folder ID (leave blank for My Drive root)
 };
 
@@ -35686,6 +35710,215 @@ async function downloadAllPhotos() {
   }
 }
 
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     CLW PATCH v3 — Load from Drive
+══════════════════════════════════════════════════════════ -->
+<script>
+// ── Drive browser UI ─────────────────────────────────────
+function clwOpenDriveBrowser() {
+  if (!CLW_GOOGLE.SCRIPT_URL) {
+    toast('Google Drive not configured — complete the Setup Guide first.', 5000);
+    return;
+  }
+  document.getElementById('modal-drive').classList.remove('hide');
+  document.getElementById('modal-drive-backdrop').classList.remove('hide');
+  // Reset state
+  document.getElementById('drive-browser-status').innerHTML =
+    '<button class="btn-primary" onclick="clwFetchDriveList()" style="font-size:13px;padding:10px 22px">Fetch visits from Drive</button>';
+  document.getElementById('drive-visit-list').innerHTML = '';
+}
+
+function clwCloseDriveBrowser() {
+  document.getElementById('modal-drive').classList.add('hide');
+  document.getElementById('modal-drive-backdrop').classList.add('hide');
+}
+
+// ── Fetch list of available visits from Drive ────────────
+async function clwFetchDriveList() {
+  const statusEl = document.getElementById('drive-browser-status');
+  const listEl   = document.getElementById('drive-visit-list');
+  statusEl.innerHTML = '<span style="color:var(--clw-mid)">⏳ Fetching from Drive…</span>';
+  listEl.innerHTML = '';
+
+  const folder = encodeURIComponent(CLW_GOOGLE.FOLDER_ID || '');
+  const url = CLW_GOOGLE.SCRIPT_URL + '?action=listVisits&folder=' + folder;
+
+  let data;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    data = await resp.json();
+  } catch(err) {
+    statusEl.innerHTML = '<span style="color:#c00;font-size:13px">⚠ Could not reach Drive. Check your internet connection and that your Apps Script is updated (see Setup Guide).</span>';
+    return;
+  }
+
+  if (data.error) {
+    statusEl.innerHTML = '<span style="color:#c00;font-size:13px">⚠ ' + e(data.error) + '</span>';
+    return;
+  }
+
+  const visits = data.visits || [];
+  if (!visits.length) {
+    statusEl.innerHTML = '<span style="color:var(--clw-mid);font-size:13px">No synced visits found in Drive.</span>';
+    return;
+  }
+
+  statusEl.innerHTML = '<span style="color:var(--clw-mid);font-size:12px">' + visits.length + ' visit' + (visits.length!==1?'s':'') + ' found</span>';
+
+  // Group by project
+  const byProject = {};
+  for (const v of visits) {
+    if (!byProject[v.project]) byProject[v.project] = [];
+    byProject[v.project].push(v);
+  }
+
+  listEl.innerHTML = Object.entries(byProject).map(([proj, pvs]) => {
+    const rows = pvs.sort((a,b) => b.date.localeCompare(a.date)).map(v =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--brd)">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--clw-dark)">${e(v.date)}</div>
+          <div style="font-size:11px;color:var(--clw-mid)">Visit ID ${e(v.visitId)}</div>
+        </div>
+        <button class="btn-primary" style="font-size:12px;padding:7px 14px;white-space:nowrap"
+          onclick="clwImportVisit(${JSON.stringify(v)}, this)">Import</button>
+      </div>`
+    ).join('');
+    return `<div style="background:white;border:1.5px solid var(--brd);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--clw-blue);margin-bottom:4px">${e(proj)}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+// ── Import a single visit from Drive into IndexedDB ──────
+async function clwImportVisit(meta, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  const folder = encodeURIComponent(CLW_GOOGLE.FOLDER_ID || '');
+  const baseUrl = CLW_GOOGLE.SCRIPT_URL
+    + '?folder=' + folder
+    + '&project=' + encodeURIComponent(meta.project)
+    + '&date='    + encodeURIComponent(meta.date)
+    + '&visitId=' + encodeURIComponent(meta.visitId);
+
+  // 1. Fetch visit JSON
+  let visitData;
+  try {
+    const resp = await fetch(baseUrl + '&action=getVisit');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const json = await resp.json();
+    if (json.error) throw new Error(json.error);
+    visitData = json.visit;
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Import';
+    toast('Could not fetch visit data: ' + err.message, 5000);
+    return;
+  }
+
+  // 2. Find or create project
+  const allProjects = await dbGetAll('projects');
+  let project = allProjects.find(p => p.name === meta.project);
+  if (!project) {
+    const pid = await dbPut('projects', {
+      name: meta.project,
+      client: visitData.f?.cli || visitData.client || '',
+      address: visitData.f?.addr || visitData.address || '',
+      ref: visitData.f?.ref || visitData.clwRef || '',
+      createdAt: Date.now(), updatedAt: Date.now()
+    });
+    project = await dbGet('projects', pid);
+  }
+
+  // 3. Strip placeholder text from photos — we'll re-fetch them
+  const cleanVisit = JSON.parse(JSON.stringify(visitData));
+  cleanVisit.projectId = project.id;
+  cleanVisit.updatedAt = Date.now();
+  cleanVisit.importedFromDrive = true;
+  delete cleanVisit.id; // Let IndexedDB assign a new local ID
+  // Clear photo blobs (placeholders from sync)
+  for (const iss of (cleanVisit.issues || [])) {
+    for (const ph of (iss.photos || [])) { ph.du = ''; }
+  }
+  for (const pin of (cleanVisit.pins || [])) {
+    if (pin.photo) pin.photo.du = '';
+  }
+
+  // 4. Save visit record
+  const newVisitId = await dbPut('visits', cleanVisit);
+
+  btn.textContent = '📷 Photos…';
+
+  // 5. Re-fetch photos in background (non-blocking)
+  clwRefetchPhotos(meta, baseUrl, newVisitId, cleanVisit).then(() => {
+    toast('✓ Visit imported — photos loaded');
+  }).catch(err => {
+    toast('Visit imported (some photos may be missing: ' + err.message + ')', 5000);
+  });
+
+  btn.disabled = false;
+  btn.textContent = '✓ Done';
+  toast('Visit imported — fetching photos…');
+  await renderProjects();
+}
+
+// ── Re-fetch photos from Drive and write to IndexedDB ────
+async function clwRefetchPhotos(meta, baseUrl, newVisitId, visit) {
+  // Helper: fetch one photo file as data URL
+  async function fetchPhoto(filename) {
+    const url = baseUrl + '&action=getPhoto&filename=' + encodeURIComponent(filename);
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const json = await resp.json();
+    return json.data || null; // data URL
+  }
+
+  // Helper: persist updated visit record
+  async function persistVisit(v) {
+    await dbPut('visits', v);
+  }
+
+  // Load current visit from DB (will be modified in place)
+  let v = await dbGet('visits', newVisitId);
+  if (!v) return;
+
+  // Plan images
+  for (const pl of (v.plans || [])) {
+    try {
+      const du = await fetchPhoto('plan_' + pl.id + '.jpg');
+      if (du) await dbPut('planImages', { key: 'v' + newVisitId + '_p' + pl.id, du });
+    } catch(e) {}
+  }
+
+  // Pinned photos (P1, P2… in order)
+  let pn = 1;
+  for (const pin of (v.pins || [])) {
+    if (pin.type === 'photo') {
+      try {
+        const du = await fetchPhoto('pin_P' + pn + '.jpg');
+        if (du && pin.photo) { pin.photo.du = du; }
+      } catch(e) {}
+      pn++;
+    }
+  }
+
+  // Issue photos
+  for (const iss of (v.issues || [])) {
+    let n = 1;
+    for (const ph of (iss.photos || [])) {
+      try {
+        const du = await fetchPhoto('finding_' + iss.id + '_photo_' + n + '.jpg');
+        if (du) ph.du = du;
+      } catch(e) {}
+      n++;
+    }
+  }
+
+  await persistVisit(v);
+}
 </script>
 
 <!-- STAGE 2: REVIEW & CAPTION SCREEN -->
