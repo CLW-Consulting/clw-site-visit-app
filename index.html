@@ -35717,6 +35717,8 @@ async function downloadAllPhotos() {
 ══════════════════════════════════════════════════════════ -->
 <script>
 // ── Drive browser UI ─────────────────────────────────────
+let _driveVisits = []; // holds fetched visit metadata so onclick can reference by index
+
 function clwOpenDriveBrowser() {
   if (!CLW_GOOGLE.SCRIPT_URL) {
     toast('Google Drive not configured — complete the Setup Guide first.', 5000);
@@ -35768,9 +35770,14 @@ async function clwFetchDriveList() {
 
   statusEl.innerHTML = '<span style="color:var(--clw-mid);font-size:12px">' + visits.length + ' visit' + (visits.length!==1?'s':'') + ' found</span>';
 
+  // Store visits globally so onclick handlers can reference by index safely
+  _driveVisits = visits;
+
   // Group by project
   const byProject = {};
-  for (const v of visits) {
+  for (let i = 0; i < visits.length; i++) {
+    const v = visits[i];
+    v._idx = i; // attach index for onclick reference
     if (!byProject[v.project]) byProject[v.project] = [];
     byProject[v.project].push(v);
   }
@@ -35783,7 +35790,7 @@ async function clwFetchDriveList() {
           <div style="font-size:11px;color:var(--clw-mid)">Visit ID ${e(v.visitId)}</div>
         </div>
         <button class="btn-primary" style="font-size:12px;padding:7px 14px;white-space:nowrap"
-          onclick="clwImportVisit(${JSON.stringify(v)}, this)">Import</button>
+          onclick="clwImportVisit(_driveVisits[${v._idx}], this)">Import</button>
       </div>`
     ).join('');
     return `<div style="background:white;border:1.5px solid var(--brd);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)">
