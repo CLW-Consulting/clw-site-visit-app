@@ -34914,8 +34914,11 @@ function _renderPinLegend(planPins){
   // Build a helper that renders a single pin row (pinNum = position in planPins)
   const pinRow=(pin,pinNum)=>{
     const txt=pin.type==='note'?e(pin.note||''):(pin.photos?.[0]?.cap?e(pin.photos[0].cap):'');
+    const hasPhoto=pin.type==='photo'&&pin.photos?.[0]?.du;
+    const thumbHtml=hasPhoto?`<img src="${pin.photos[0].du}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;flex-shrink:0;cursor:pointer;border:1px solid var(--brd);transition:opacity .12s" onmouseenter="this.style.opacity='.75'" onmouseleave="this.style.opacity='1'" onclick="event.stopPropagation();openPlanAndFocusPin(${pin.id})" title="Edit pin">`:'';
     return`<div class="legend-row" onclick="scrollToPinIssue(${pin.id})" title="Jump to issue">
-      <span class="legend-dot" style="background:#282828">${pinNum}</span>
+      <span class="legend-dot" style="background:#282828;cursor:pointer" onclick="event.stopPropagation();openPlanAndFocusPin(${pin.id})" title="Edit pin">${pinNum}</span>
+      ${thumbHtml}
       <span class="legend-label">${txt?`${pin.type==='note'?'✏️ ':''}${txt}`:'<span style="color:#aaa;font-weight:400;font-style:italic">No caption</span>'}</span>
     </div>`;
   };
