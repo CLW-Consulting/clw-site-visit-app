@@ -34121,7 +34121,6 @@ function gv(id){return document.getElementById(id)?.value||'';}
 function sv(id,v){const el=document.getElementById(id);if(el&&v!==undefined&&v!==null)el.value=v;}
 function fmtD(ds){if(!ds)return'';const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});}
 function duBuf(du){const b=atob(du.split(',')[1]),a=new ArrayBuffer(b.length),v=new Uint8Array(a);for(let i=0;i<b.length;i++)v[i]=b.charCodeAt(i);return a;}
-function compressImage(du,maxDim,quality){return new Promise(resolve=>{const im=new Image();im.onload=()=>{let w=im.naturalWidth,h=im.naturalHeight;if(w>maxDim||h>maxDim){if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}else{w=Math.round(w*maxDim/h);h=maxDim;}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);resolve(c.toDataURL('image/jpeg',quality));};im.src=du;});}
 function b64ToArr(s){const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
 function toast(msg,dur=3000){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),dur);}
 
@@ -34280,11 +34279,9 @@ function addFs(iid,files){
     const rd=new FileReader();
     rd.onload=ev=>{
       const im=new Image();
-      im.onload=async()=>{
+      im.onload=()=>{
         let tp=f.type.split('/')[1];if(tp==='jpg')tp='jpeg';
-        const nW=im.naturalWidth,nH=im.naturalHeight;
-        const du=await compressImage(ev.target.result,1920,0.65);
-        iss.photos.push({id:++pseq,du,tp:'jpeg',cap:'',wp:70,nW,nH});
+        iss.photos.push({id:++pseq,du:ev.target.result,tp,cap:'',wp:70,nW:im.naturalWidth,nH:im.naturalHeight});
         document.getElementById('pg'+iid)?.replaceWith(createNode(rPhotos(iss)));
         renderAll();saveSt();
       };im.src=ev.target.result;
@@ -34872,11 +34869,9 @@ function onPinPhotoSelected(evt){
     const rd=new FileReader();
     rd.onload=ev=>{
       const im=new Image();
-      im.onload=async()=>{
+      im.onload=()=>{
         let tp=file.type.split('/')[1];if(tp==='jpg')tp='jpeg';
-        const nW=im.naturalWidth,nH=im.naturalHeight;
-        const du=await compressImage(ev.target.result,1920,0.65);
-        pin.photos.push({du,tp:'jpeg',cap:'',nW,nH});
+        pin.photos.push({du:ev.target.result,tp,cap:'',nW:im.naturalWidth,nH:im.naturalHeight});
         remaining--;
         if(remaining===0){
           saveSt();renderAll();_drawPlan();renderInlinePlan();
@@ -34935,11 +34930,9 @@ function _processDroppedFile(file){
   const rd=new FileReader();
   rd.onload=ev=>{
     const im=new Image();
-    im.onload=async()=>{
+    im.onload=()=>{
       let tp=file.type.split('/')[1];if(tp==='jpg')tp='jpeg';
-      const nW=im.naturalWidth,nH=im.naturalHeight;
-      const du=await compressImage(ev.target.result,1920,0.65);
-      const photoObj={du,tp:'jpeg',cap:'',nW,nH};
+      const photoObj={du:ev.target.result,tp,cap:'',nW:im.naturalWidth,nH:im.naturalHeight};
       // If editing a pin, append immediately
       const pin=_editingPinId?pins.find(p=>p.id===_editingPinId):null;
       if(pin){
