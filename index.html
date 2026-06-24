@@ -504,6 +504,14 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
         <button class="pin-type-btn" data-type="note" onclick="setPinType('note')">✏️ Note</button>
       </div>
       <div id="pin-photo-gallery" class="pin-photo-gallery" style="display:none"></div>
+      <div id="pin-merge-row" class="pap-row hide" style="background:rgba(0,108,170,.06);border-radius:8px;padding:8px 10px;margin-bottom:4px">
+        <label style="color:var(--clw-blue);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.5px">⊕ Merge with another pin</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <select id="pin-merge-select" style="flex:1;padding:6px 8px;border-radius:7px;border:1.5px solid var(--brd);font-size:12px;font-weight:600;font-family:inherit"></select>
+          <button onclick="mergePins()" style="background:var(--clw-blue);color:white;border:none;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap">Merge ✓</button>
+        </div>
+        <div style="font-size:10px;color:var(--clw-mid);margin-top:4px">Photos from the selected pin will be combined into this one and that pin removed.</div>
+      </div>
       <div id="pin-photo-opts" class="pin-photo-opts">
         <button class="pin-photo-opt active" data-pmode="take" onclick="activatePinPhoto('take')">📷 Take Photo</button>
         <button class="pin-photo-opt" data-pmode="add" onclick="activatePinPhoto('add')">🖼 Add Photo</button>
@@ -34332,19 +34340,102 @@ function openIssueLightbox(issId,startIdx){
   openLightbox(srcs,startIdx||0);
 }
 
+// ── Photo processing: fix EXIF orientation + compress on ingest ──────────────
+// Reads EXIF orientation tag from a JPEG ArrayBuffer (returns 1 if not found)
+function _readExifOrientation(buffer) {
+  try {
+    const view = new DataView(buffer);
+    if (view.byteLength < 12 || view.getUint16(0) !== 0xFFD8) return 1;
+    let offset = 2;
+    while (offset < view.byteLength - 4) {
+      const marker = view.getUint16(offset); offset += 2;
+      if (marker === 0xFFE1) { // APP1 = EXIF block
+        const segEnd = offset + view.getUint16(offset); offset += 2;
+        if (segEnd > view.byteLength) return 1;
+        if (view.getUint32(offset) !== 0x45786966) return 1; // not 'Exif'
+        offset += 6; // skip 'Exif\0\0'
+        const tiff = offset;
+        const le = view.getUint16(tiff) === 0x4949; // byte order
+        const ifd = tiff + view.getUint32(tiff + 4, le);
+        if (ifd + 2 > view.byteLength) return 1;
+        const n = view.getUint16(ifd, le);
+        for (let i = 0; i < n; i++) {
+          const e = ifd + 2 + i * 12;
+          if (e + 12 > view.byteLength) break;
+          if (view.getUint16(e, le) === 0x0112) // orientation tag
+            return view.getUint16(e + 8, le);
+        }
+        return 1;
+      }
+      if ((marker & 0xFF00) !== 0xFF00) break;
+      if (offset + 2 > view.byteLength) break;
+      offset += view.getUint16(offset); // skip this segment
+    }
+  } catch(e) {}
+  return 1;
+}
+
+// Reads a photo File, corrects EXIF orientation, resizes to maxDim, returns JPEG data URL
+async function processPhoto(file, maxDim, quality) {
+  maxDim = maxDim || 2000; quality = quality || 0.85;
+  return new Promise((res, rej) => {
+    const ar = new FileReader();
+    ar.onload = function(ev) {
+      const orient = _readExifOrientation(ev.target.result);
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function() {
+        URL.revokeObjectURL(url);
+        const nW = img.naturalWidth, nH = img.naturalHeight;
+        // Orientations 5-8 have swapped visual width/height
+        const swapped = orient >= 5 && orient <= 8;
+        const visW = swapped ? nH : nW, visH = swapped ? nW : nH;
+        const s = Math.min(1, maxDim / Math.max(visW, visH));
+        const dw = Math.round(visW * s), dh = Math.round(visH * s);
+        const sw = Math.round(nW * s), sh = Math.round(nH * s);
+        const c = document.createElement('canvas');
+        c.width = dw; c.height = dh;
+        const ctx = c.getContext('2d');
+        // Apply EXIF orientation transform then draw the image
+        switch (orient) {
+          case 2: ctx.transform(-1,0,0,1,dw,0);         ctx.drawImage(img,0,0,dw,dh); break;
+          case 3: ctx.translate(dw,dh); ctx.rotate(Math.PI); ctx.drawImage(img,0,0,dw,dh); break;
+          case 4: ctx.transform(1,0,0,-1,0,dh);          ctx.drawImage(img,0,0,dw,dh); break;
+          case 5: ctx.transform(0,1,1,0,0,0);            ctx.drawImage(img,0,0,sw,sh); break;
+          case 6: ctx.translate(dw,0); ctx.rotate(Math.PI/2);  ctx.drawImage(img,0,0,sw,sh); break;
+          case 7: ctx.transform(0,-1,-1,0,dw,dh);        ctx.drawImage(img,0,0,sw,sh); break;
+          case 8: ctx.translate(0,dh); ctx.rotate(-Math.PI/2); ctx.drawImage(img,0,0,sw,sh); break;
+          default: ctx.drawImage(img,0,0,dw,dh);
+        }
+        res(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = rej; img.src = url;
+    };
+    ar.onerror = rej; ar.readAsArrayBuffer(file);
+  });
+}
+
 function addFs(iid,files){
   const iss=issues.find(i=>i.id===iid);if(!iss||!files)return;
   Array.from(files).forEach(f=>{
-    const rd=new FileReader();
-    rd.onload=ev=>{
+    processPhoto(f).then(du=>{
       const im=new Image();
       im.onload=()=>{
-        let tp=f.type.split('/')[1];if(tp==='jpg')tp='jpeg';
-        iss.photos.push({id:++pseq,du:ev.target.result,tp,cap:'',wp:70,nW:im.naturalWidth,nH:im.naturalHeight});
+        iss.photos.push({id:++pseq,du,tp:'jpeg',cap:'',wp:70,nW:im.naturalWidth,nH:im.naturalHeight});
         document.getElementById('pg'+iid)?.replaceWith(createNode(rPhotos(iss)));
         renderAll();saveSt();
-      };im.src=ev.target.result;
-    };rd.readAsDataURL(f);
+      };im.src=du;
+    }).catch(()=>{
+      // fallback: read as-is if processPhoto fails
+      const rd=new FileReader();
+      rd.onload=ev=>{
+        const im=new Image();im.onload=()=>{
+          let tp=f.type.split('/')[1];if(tp==='jpg')tp='jpeg';
+          iss.photos.push({id:++pseq,du:ev.target.result,tp,cap:'',wp:70,nW:im.naturalWidth,nH:im.naturalHeight});
+          document.getElementById('pg'+iid)?.replaceWith(createNode(rPhotos(iss)));renderAll();saveSt();
+        };im.src=ev.target.result;
+      };rd.readAsDataURL(f);
+    });
   });
 }
 function createNode(html){const d=document.createElement('div');d.innerHTML=html;return d.firstChild;}
@@ -34908,6 +34999,7 @@ function _resetPanelToNewMode(){
   });
   _hideDropZone();
   const gal=document.getElementById('pin-photo-gallery');if(gal){gal.style.display='none';gal.innerHTML='';}
+  const mr=document.getElementById('pin-merge-row');if(mr)mr.classList.add('hide');
   // Show type toggle for new pins
   const tr=document.querySelector('.pin-type-row');if(tr)tr.style.display='';
 }
@@ -34943,6 +35035,7 @@ function _openPinEdit(pin,pinNum){
   });
   _hideDropZone();
   _refreshPinGallery(pin);
+  _showMergeRow(pin);
   document.getElementById('pin-assign-panel').classList.remove('hide');
 }
 
@@ -35026,31 +35119,33 @@ function onPinPhotoSelected(evt){
   const pinId=window._lastPinId;
   const pin=pins.find(p=>p.id===pinId);if(!pin)return;
   if(!pin.photos)pin.photos=[];
+  const isCamera=evt.target.id==='pin-photo-input';
   let remaining=files.length;
+  function _onPhotoReady(du,nW,nH){
+    pin.photos.push({du,tp:'jpeg',cap:pin.note||'',nW,nH,...(isCamera?{ts:Date.now()}:{})});
+    remaining--;
+    if(remaining===0){
+      saveSt();renderAll();_drawPlan();renderInlinePlan();
+      if(_pendingPinEdit===pin.id){
+        _pendingPinEdit=null;const pinNum=pins.indexOf(pin)+1;_openPinEdit(pin,pinNum);
+      } else {
+        _refreshPinGallery(pin);_showPlanReadyHint();
+        toast(files.length>1?`${files.length} photos added ✓`:'Photo added ✓');
+      }
+    }
+  }
   files.forEach(file=>{
-    const rd=new FileReader();
-    rd.onload=ev=>{
-      const im=new Image();
-      im.onload=()=>{
-        let tp=file.type.split('/')[1];if(tp==='jpg')tp='jpeg';
-        const isCamera=evt.target.id==='pin-photo-input';
-        pin.photos.push({du:ev.target.result,tp,cap:pin.note||'',nW:im.naturalWidth,nH:im.naturalHeight,...(isCamera?{ts:Date.now()}:{})});
-        remaining--;
-        if(remaining===0){
-          saveSt();renderAll();_drawPlan();renderInlinePlan();
-          // If this was a brand-new pin's first photo, reopen the panel so the user can label it
-          if(_pendingPinEdit===pin.id){
-            _pendingPinEdit=null;
-            const pinNum=pins.indexOf(pin)+1;
-            _openPinEdit(pin,pinNum);
-          } else {
-            _refreshPinGallery(pin);
-            _showPlanReadyHint();
-            toast(files.length>1?`${files.length} photos added ✓`:'Photo added ✓');
-          }
-        }
-      };im.src=ev.target.result;
-    };rd.readAsDataURL(file);
+    processPhoto(file).then(du=>{
+      const im=new Image();im.onload=()=>_onPhotoReady(du,im.naturalWidth,im.naturalHeight);
+      im.onerror=()=>_onPhotoReady(du,0,0); im.src=du;
+    }).catch(()=>{
+      // fallback
+      const rd=new FileReader();
+      rd.onload=ev=>{
+        const im=new Image();im.onload=()=>_onPhotoReady(ev.target.result,im.naturalWidth,im.naturalHeight);
+        im.onerror=()=>_onPhotoReady(ev.target.result,0,0); im.src=ev.target.result;
+      };rd.readAsDataURL(file);
+    });
   });
   evt.target.value='';
 }
@@ -35085,6 +35180,50 @@ function _refreshPinGallery(pin){
   }).join('');
 }
 
+// ── Pin merge ─────────────────────────────────────────────────
+function _showMergeRow(pin){
+  const row=document.getElementById('pin-merge-row');
+  const sel=document.getElementById('pin-merge-select');
+  if(!row||!sel)return;
+  if(pin.type!=='photo'){row.classList.add('hide');return;}
+  // Candidates: other photo pins on the same plan, under the same issue, with at least one photo
+  const candidates=pins.filter(p=>
+    p.id!==pin.id &&
+    p.planId===pin.planId &&
+    p.type==='photo' &&
+    p.issueId!=null &&
+    p.issueId===pin.issueId &&
+    p.photos?.some(ph=>ph.du)
+  );
+  if(!candidates.length){row.classList.add('hide');return;}
+  sel.innerHTML=candidates.map(p=>{
+    const pn=pins.indexOf(p)+1;
+    const cap=(p.photos?.[0]?.cap||'').trim();
+    return`<option value="${p.id}">P${pn}${cap?' – '+cap.substring(0,35):''}  (${p.photos.filter(ph=>ph.du).length} photo${p.photos.filter(ph=>ph.du).length!==1?'s':''})</option>`;
+  }).join('');
+  row.classList.remove('hide');
+}
+
+function mergePins(){
+  if(!_editingPinId)return;
+  const sel=document.getElementById('pin-merge-select');
+  const sourceId=parseInt(sel?.value);
+  if(!sourceId||isNaN(sourceId))return;
+  const target=pins.find(p=>p.id===_editingPinId);
+  const source=pins.find(p=>p.id===sourceId);
+  if(!target||!source){toast('Could not find pins to merge');return;}
+  const srcNum=pins.indexOf(source)+1;
+  if(!confirm(`Merge P${srcNum} into this pin? P${srcNum} will be removed and its photos added here.`))return;
+  if(!target.photos)target.photos=[];
+  (source.photos||[]).filter(ph=>ph.du).forEach(ph=>target.photos.push(Object.assign({},ph)));
+  pins=pins.filter(p=>p.id!==sourceId);
+  saveSt();_drawPlan();renderInlinePlan();renderAll();
+  _refreshPinGallery(target);
+  _showMergeRow(target);
+  const tgtNum=pins.indexOf(target)+1;
+  toast(`Merged → P${tgtNum} now has ${target.photos.filter(ph=>ph.du).length} photos ✓`);
+}
+
 // ── Pin drop zone ─────────────────────────────────────────────
 function _showDropZone(){
   const dz=document.getElementById('pin-drop-zone');
@@ -35097,30 +35236,33 @@ function _hideDropZone(){
 }
 function _processDroppedFile(file){
   if(!file||!file.type.startsWith('image/'))return;
-  const rd=new FileReader();
-  rd.onload=ev=>{
-    const im=new Image();
-    im.onload=()=>{
-      let tp=file.type.split('/')[1];if(tp==='jpg')tp='jpeg';
-      // If editing a pin, append immediately
-      const pin=_editingPinId?pins.find(p=>p.id===_editingPinId):null;
-      const photoObj={du:ev.target.result,tp,cap:pin?.note||'',nW:im.naturalWidth,nH:im.naturalHeight};
-      if(pin){
-        if(!pin.photos)pin.photos=[];
-        pin.photos.push(photoObj);
-        saveSt();renderAll();_drawPlan();renderInlinePlan();
-        _refreshPinGallery(pin);
-        const dz=document.getElementById('pin-drop-zone');
-        if(dz){dz.classList.remove('drag-over');dz.classList.add('has-photo');dz.innerHTML=`✓ Photo added<br><img src="${ev.target.result}" alt="">`;}
-        toast('Photo added ✓');
-      } else {
-        // New pin mode — store temporarily for confirmPinAssign
-        _droppedPhotoData=photoObj;
-        const dz=document.getElementById('pin-drop-zone');
-        if(dz){dz.classList.remove('drag-over');dz.classList.add('has-photo');dz.innerHTML=`✓ Photo ready<br><img src="${ev.target.result}" alt="">`;}
-      }
-    };im.src=ev.target.result;
-  };rd.readAsDataURL(file);
+  function _applyPhoto(du,nW,nH){
+    const pin=_editingPinId?pins.find(p=>p.id===_editingPinId):null;
+    const photoObj={du,tp:'jpeg',cap:pin?.note||'',nW,nH};
+    if(pin){
+      if(!pin.photos)pin.photos=[];
+      pin.photos.push(photoObj);
+      saveSt();renderAll();_drawPlan();renderInlinePlan();
+      _refreshPinGallery(pin);
+      const dz=document.getElementById('pin-drop-zone');
+      if(dz){dz.classList.remove('drag-over');dz.classList.add('has-photo');dz.innerHTML=`✓ Photo added<br><img src="${du}" alt="">`;}
+      toast('Photo added ✓');
+    } else {
+      _droppedPhotoData=photoObj;
+      const dz=document.getElementById('pin-drop-zone');
+      if(dz){dz.classList.remove('drag-over');dz.classList.add('has-photo');dz.innerHTML=`✓ Photo ready<br><img src="${du}" alt="">`;}
+    }
+  }
+  processPhoto(file).then(du=>{
+    const im=new Image();im.onload=()=>_applyPhoto(du,im.naturalWidth,im.naturalHeight);
+    im.onerror=()=>_applyPhoto(du,0,0); im.src=du;
+  }).catch(()=>{
+    const rd=new FileReader();
+    rd.onload=ev=>{
+      const im=new Image();im.onload=()=>_applyPhoto(ev.target.result,im.naturalWidth,im.naturalHeight);
+      im.onerror=()=>_applyPhoto(ev.target.result,0,0); im.src=ev.target.result;
+    };rd.readAsDataURL(file);
+  });
 }
 document.addEventListener('DOMContentLoaded',()=>{
   const dz=document.getElementById('pin-drop-zone');
@@ -35839,6 +35981,14 @@ function clwShowSyncBtn(show) {
   if (btn) btn.classList.toggle('hide', !show);
 }
 
+// ── Concurrency helper for parallel uploads ───────────────────
+async function _runWithConcurrency(tasks, concurrency) {
+  if (!tasks.length) return;
+  let i = 0;
+  async function worker() { while (i < tasks.length) { const fn = tasks[i++]; await fn(); } }
+  await Promise.all(Array.from({length: Math.min(concurrency, tasks.length)}, worker));
+}
+
 // ── Offline-first sync queue ──────────────────────────────────
 async function clwMarkDirty(visitId) {
   if (!visitId) return;
@@ -35911,22 +36061,32 @@ async function clwSyncVisit(visitId) {
     if (rec?.du) await postFile(`plan_${pl.id}.jpg`, rec.du).catch(()=>{});
   }
 
-  // Pinned photos (P1A, P1B… to match report numbering)
+  // Collect all photo upload tasks then run up to 4 in parallel
+  const _photoTasks = [];
   let pn = 1;
   for (const pin of (visit.pins||[])) {
     if (pin.type==='photo') {
       const phs=(pin.photos||[]);
       for(let pi=0;pi<phs.length;pi++){
-        if(phs[pi]?.du)await postFile(`pin_P${pn}${phs.length>1?String.fromCharCode(65+pi):'A'}.jpg`,phs[pi].du).catch(()=>{});
+        if(phs[pi]?.du){
+          const fname=`pin_P${pn}${phs.length>1?String.fromCharCode(65+pi):'A'}.jpg`;
+          const du=phs[pi].du;
+          _photoTasks.push(()=>postFile(fname,du).catch(()=>{}));
+        }
       }
       pn++;
     }
   }
-
-  // Issue photos
   for (const iss of (visit.issues||[])) {
-    let n=1; for (const ph of (iss.photos||[])) { if (ph.du) await postFile(`finding_${iss.id}_photo_${n}.jpg`, ph.du).catch(()=>{}); n++; }
+    let n=1; for (const ph of (iss.photos||[])) {
+      if (ph.du) {
+        const fname=`finding_${iss.id}_photo_${n}.jpg`, du=ph.du;
+        _photoTasks.push(()=>postFile(fname,du).catch(()=>{}));
+      }
+      n++;
+    }
   }
+  await _runWithConcurrency(_photoTasks, 4);
 
   // Sheets log row
   const f = visit.f || {};
@@ -36398,204 +36558,4 @@ async function clwFetchDriveList() {
           ${counts ? `<div style="font-size:11px;color:var(--clw-blue);margin-top:1px;font-weight:700">${counts}</div>` : ''}
           <div style="font-size:10px;color:#aaa;margin-top:1px">${synced}</div>
         </div>
-        <button class="btn-primary" style="font-size:12px;padding:7px 14px;white-space:nowrap;flex-shrink:0"
-          onclick="clwImportVisit(_driveVisits[${v._idx}], this)">Import</button>
-      </div>`;
-    }).join('');
-    return `<div style="background:white;border:1.5px solid var(--brd);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)">
-      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--clw-blue);margin-bottom:4px">${e(proj)}</div>
-      ${rows}
-    </div>`;
-  }).join('');
-}
-
-// ── Import a single visit from Drive into IndexedDB ──────
-async function clwImportVisit(meta, btn) {
-  btn.disabled = true;
-  btn.textContent = '⏳';
-
-  const folder = encodeURIComponent(CLW_GOOGLE.FOLDER_ID || '');
-  const baseUrl = CLW_GOOGLE.SCRIPT_URL
-    + '?folder='  + folder
-    + '&project=' + encodeURIComponent(meta.project)
-    + '&date='    + encodeURIComponent(meta.date)
-    + '&visitId=' + encodeURIComponent(meta.visitId)
-    + (meta.fileId ? '&fileId=' + encodeURIComponent(meta.fileId) : '');
-
-  // 1. Fetch visit JSON
-  let visitData;
-  try {
-    const resp = await fetch(baseUrl + '&action=getVisit');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const json = await resp.json();
-    if (json.error) throw new Error(json.error);
-    visitData = json.visit;
-  } catch(err) {
-    btn.disabled = false; btn.textContent = 'Import';
-    toast('Could not fetch visit data: ' + err.message, 5000);
-    return;
-  }
-
-  // 2. Find or create project
-  const allProjects = await dbGetAll('projects');
-  let project = allProjects.find(p => p.name === meta.project);
-  if (!project) {
-    const pid = await dbPut('projects', {
-      name: meta.project,
-      client: visitData.f?.cli || visitData.client || '',
-      address: visitData.f?.addr || visitData.address || '',
-      ref: visitData.f?.ref || visitData.clwRef || '',
-      createdAt: Date.now(), updatedAt: Date.now()
-    });
-    project = await dbGet('projects', pid);
-  }
-
-  // 3. Strip placeholder text from photos — we'll re-fetch them
-  const cleanVisit = JSON.parse(JSON.stringify(visitData));
-  cleanVisit.projectId = project.id;
-  cleanVisit.updatedAt = Date.now();
-  cleanVisit.importedFromDrive = true;
-  delete cleanVisit.id; // Let IndexedDB assign a new local ID
-  // Clear photo blobs (placeholders from sync)
-  for (const iss of (cleanVisit.issues || [])) {
-    for (const ph of (iss.photos || [])) { ph.du = ''; }
-  }
-  for (const pin of (cleanVisit.pins || [])) {
-    if(pin.photo&&!pin.photos){pin.photos=pin.photo.du?[pin.photo]:[];delete pin.photo;}
-    for (const ph of (pin.photos||[])) { ph.du = ''; }
-  }
-
-  // 4. Save visit record
-  const newVisitId = await dbPut('visits', cleanVisit);
-
-  // 5. Count total photos so the progress bar has a denominator
-  const totalPhotos = (cleanVisit.plans || []).length
-    + (cleanVisit.pins  || []).reduce((s,p)=>s+(p.type==='photo'?(p.photos||[]).length:0),0)
-    + (cleanVisit.issues|| []).reduce((s, iss) => s + (iss.photos||[]).length, 0);
-
-  // Inject a progress bar below the button
-  let progWrap = btn.parentElement.querySelector('.clw-prog-wrap');
-  if (!progWrap) {
-    progWrap = document.createElement('div');
-    progWrap.className = 'clw-prog-wrap';
-    progWrap.style.cssText = 'margin-top:8px;width:100%';
-    btn.parentElement.appendChild(progWrap);
-  }
-  const renderProg = (done, total) => {
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    progWrap.innerHTML = `
-      <div style="font-size:11px;color:var(--clw-mid);margin-bottom:4px;text-align:center">
-        📷 ${done} / ${total} photos
-      </div>
-      <div style="background:#e0e8f0;border-radius:20px;height:6px;overflow:hidden">
-        <div style="background:var(--clw-blue);height:100%;width:${pct}%;transition:width .3s;border-radius:20px"></div>
-      </div>`;
-  };
-
-  btn.textContent = '📷 Fetching…';
-  if (totalPhotos > 0) renderProg(0, totalPhotos);
-
-  try {
-    await clwRefetchPhotos(baseUrl, newVisitId, renderProg);
-    toast('✓ Visit imported with photos');
-  } catch(err) {
-    toast('Visit imported — some photos may be missing (' + err.message + ')', 5000);
-  }
-
-  progWrap.remove();
-  btn.disabled = false;
-  btn.textContent = '✓ Done';
-  clwCloseDriveBrowser();
-  await openProject(project.id);
-}
-
-// ── Re-fetch photos from Drive and write to IndexedDB ────
-async function clwRefetchPhotos(baseUrl, newVisitId, onProgress) {
-  // Fetch one photo file as a data URL via Apps Script
-  async function fetchPhoto(filename) {
-    const url = baseUrl + '&action=getPhoto&filename=' + encodeURIComponent(filename);
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' for ' + filename);
-    const json = await resp.json();
-    if (json.error) throw new Error(json.error);
-    return json.data || null;
-  }
-
-  // Load visit from DB
-  const v = await dbGet('visits', newVisitId);
-  if (!v) return;
-
-  // Count total for progress reporting
-  const total = (v.plans||[]).length
-    + (v.pins||[]).reduce((s,p)=>s+(p.type==='photo'?(p.photos||[]).length:0),0)
-    + (v.issues||[]).reduce((s, iss) => s + (iss.photos||[]).length, 0);
-  let done = 0, failed = 0;
-
-  const tick = () => { done++; if (onProgress) onProgress(done, total); };
-
-  // Plan images — stored separately in planImages store
-  for (const pl of (v.plans || [])) {
-    try {
-      const du = await fetchPhoto('plan_' + pl.id + '.jpg');
-      if (du) { await dbPut('planImages', { key: 'v' + newVisitId + '_p' + pl.id, du }); }
-    } catch(err) { console.warn('Plan photo failed:', err.message); failed++; }
-    tick();
-  }
-
-  // Pinned photos (P1A, P1B… matching sync order) — stored in visit record
-  let pn = 1;
-  for (const pin of (v.pins || [])) {
-    if (pin.type === 'photo') {
-      if(!pin.photos)pin.photos=[];
-      for(let pi=0;pi<pin.photos.length;pi++){
-        try {
-          // Try new multi-photo naming first, fall back to legacy single-photo name for pi===0
-          let du = await fetchPhoto(`pin_P${pn}${String.fromCharCode(65+pi)}.jpg`).catch(()=>null);
-          if(!du && pi===0) du = await fetchPhoto(`pin_P${pn}.jpg`).catch(()=>null);
-          if(du) pin.photos[pi].du = du;
-        } catch(err) { console.warn('Pin photo P'+pn+String.fromCharCode(65+pi)+' failed:', err.message); failed++; }
-        tick();
-      }
-      pn++;
-    }
-  }
-
-  // Issue photos — stored in visit record
-  for (const iss of (v.issues || [])) {
-    let n = 1;
-    for (const ph of (iss.photos || [])) {
-      try {
-        const du = await fetchPhoto('finding_' + iss.id + '_photo_' + n + '.jpg');
-        if (du) { ph.du = du; }
-      } catch(err) { console.warn('Issue photo failed:', err.message); failed++; }
-      tick();
-      n++;
-    }
-  }
-
-  // Save updated visit record (now contains pin + issue photo data)
-  await dbPut('visits', v);
-
-  if (failed > 0) throw new Error((done - failed) + ' photos loaded, ' + failed + ' failed — check console for details');
-}
-</script>
-
-<!-- STAGE 2: REVIEW & CAPTION SCREEN -->
-<div id="screen-review" class="screen">
-  <div class="app-hdr">
-    <div class="hdr-l">
-      <button class="back-btn" onclick="closeReviewScreen()">&#8592; Back to Visit</button>
-      <span class="hdr-title">Review &amp; Caption Photos</span>
-    </div>
-    <div id="review-progress" class="sync-status sync-saving">0 / 0 captioned</div>
-  </div>
-  <div class="main">
-    <p style="font-size:13px;color:var(--clw-mid);margin-bottom:20px;line-height:1.6">
-      Add a caption to each photo before generating your report. Changes save automatically.
-    </p>
-    <div id="review-grid" style="display:flex;flex-direction:column;gap:12px"></div>
-    <div style="height:40px"></div>
-  </div>
-</div>
-</body>
-</html>
+        <button 
