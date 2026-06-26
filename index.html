@@ -244,6 +244,15 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 .minimise-all-wrap{display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px}
 .minimise-all-btn{border:1.5px solid var(--brd);border-radius:20px;background:white;padding:5px 14px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;color:var(--clw-mid);transition:all .15s}
 .minimise-all-btn:hover{border-color:var(--clw-blue);color:var(--clw-blue)}
+/* Collapsed issue: issue-num is tappable to expand */
+.issue-card.collapsed .issue-num{cursor:pointer;color:var(--clw-blue);text-decoration:underline dotted;text-underline-offset:2px}
+.issue-card.collapsed .issue-num:hover{opacity:.75}
+/* Add-pin button in header (collapsed state) */
+.iss-addpin-hdr-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:none;cursor:pointer;font-size:16px;font-weight:900;line-height:1;font-family:inherit;transition:all .12s;flex-shrink:0;background:#16a34a;color:white}
+.iss-addpin-hdr-btn:hover{filter:brightness(1.12)}
+/* Add-pin inline button next to Description label */
+.iss-addpin-inline{background:none;border:1.5px solid var(--clw-blue);color:var(--clw-blue);border-radius:14px;padding:2px 10px;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer;transition:all .12s;white-space:nowrap;margin-left:auto}
+.iss-addpin-inline:hover{background:var(--clw-blue);color:white}
 /* ── Pin action buttons ── */
 .pap-movepin{background:#f59e0b;color:white;border:none;padding:10px 10px;border-radius:8px;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer;transition:all .15s;white-space:nowrap}
 .pap-movepin:hover{background:#d97706}
@@ -455,6 +464,8 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
             <span id="inline-plan-name" class="inline-plan-name">Plan</span>
             <span class="tap-plan-hint">Tap plan to add / edit pins</span>
             <button class="pin-edit-btn" id="crop-btn" onclick="startInlineCrop()">✂ Crop Layout</button>
+            <button class="pin-edit-btn hide" id="crop-pan-btn" onclick="toggleCropPan()">✋ Pan</button>
+            <button class="reset-crop-btn hide" id="undo-crop-btn" onclick="undoInlineCrop()">↩ Undo</button>
             <button class="reset-crop-btn hide" id="reset-crop-btn" onclick="resetInlineCrop()">↺ Reset Layout</button>
           </div>
           <canvas id="inline-plan-canvas" class="inline-plan-canvas" style="cursor:pointer" onclick="if(!_inlineCropMode)openPlanOverlay(_activePlanId)"></canvas>
@@ -33853,6 +33864,8 @@ let _activePlanId=null,_contextIssueId=null,_pendingPin=null,_pendingPinType='ph
 let _collapsedIssues=new Set();
 let _planCrops={};           // {planId:{x1,y1,x2,y2}} — fractions of full image
 let _inlineCropMode=false,_icDragging=false,_icStart=null,_inlinePlanImgCache=null;
+let _cropHistory={};  // {planId:[{x1,y1,x2,y2}|null, ...]} — undo stack
+let _icPanMode=false,_icPanCropAtStart=null;
 let _planImgCache={};
 
 // ── Navigation ───────────────────────────────────────────────
@@ -34242,6 +34255,14 @@ function scrollToIssue(id){
   }
 }
 
+// ── Add pin from issue card ─────────────────────────────────────────
+function addPinForIssue(issId){
+  if(!plans.length||!_activePlanId){toast('Upload a plan first to place pins');return;}
+  _contextIssueId=issId;
+  openPlanOverlay(_activePlanId);
+  toast('Tap on the plan to place a pin for this issue');
+}
+
 // ── Pin move mode ───────────────────────────────────────────────────
 function enterPinMoveMode(){
   if(!_editingPinId)return;
@@ -34351,8 +34372,8 @@ function renderAll(){
   if(!issues.length){wrap.innerHTML='';return;}
   const _minBtn=document.querySelector('.minimise-all-btn');
   if(_minBtn)_minBtn.textContent=issues.length&&issues.every(i=>_collapsedIssues.has(i.id))?'⤢ Expand All':'− Minimise All';
-  wrap.innerHTML=issues.map((iss,idx)=>`
-  <div class="issue-card${_collapsedIssues.has(iss.id)?' collapsed':''}" data-id="${iss.id}" draggable="true"
+  wrap.innerHTML=issues.map((iss,idx)=>{const _coll=_collapsedIssues.has(iss.id);return`
+  <div class="issue-card${_coll?' collapsed':''}" data-id="${iss.id}" draggable="true"
     ondragstart="issDragStart(event,${iss.id})"
     ondragover="issDragOver(event)"
     ondragleave="issDragLeave(event)"
@@ -34363,14 +34384,17 @@ function renderAll(){
         <button class="iss-move-btn" onclick="event.stopPropagation();issMove(${iss.id},-1)" title="Move up"${idx===0?' disabled':''}>▲</button>
         <button class="iss-move-btn" onclick="event.stopPropagation();issMove(${iss.id},1)" title="Move down"${idx===issues.length-1?' disabled':''}>▼</button>
       </span>
-      <div class="issue-num">Issue ${idx+1}</div>
+      <div class="issue-num" onclick="event.stopPropagation();toggleIssueCollapse(${iss.id})" title="${_coll?'Tap to expand':''}">Issue ${idx+1}</div>
       <input class="issue-ti" placeholder="Finding title…" value="${e(iss.title)}" oninput="saveSt()">
-      <button class="iss-collapse-btn" onclick="event.stopPropagation();toggleIssueCollapse(${iss.id})" title="Minimise/expand" style="background:${_collapsedIssues.has(iss.id)?'#27ae60':'#f5a623'}">${_collapsedIssues.has(iss.id)?'⤢':'−'}</button>
-      <button class="issue-del" onclick="delIssue(${iss.id})" title="Remove">×</button>
+      ${_coll
+        ? `<button class="iss-addpin-hdr-btn" onclick="event.stopPropagation();addPinForIssue(${iss.id})" title="Add pin to this issue">＋</button>`
+        : `<button class="iss-collapse-btn" onclick="event.stopPropagation();toggleIssueCollapse(${iss.id})" title="Minimise" style="background:#f5a623">−</button>
+           <button class="issue-del" onclick="event.stopPropagation();delIssue(${iss.id})" title="Remove">×</button>`
+      }
     </div>
     <div class="issue-body">
       <div class="ta-blk">
-        <div class="ta-top"><span class="ta-lbl">Description</span></div>
+        <div class="ta-top"><span class="ta-lbl">Description</span><button class="iss-addpin-inline" onclick="addPinForIssue(${iss.id})" title="Add pin to this issue">＋ Add Pin</button></div>
         <textarea id="ta-i${iss.id}" rows="3" placeholder="Describe the finding…" oninput="saveSt()">${e(iss.desc)}</textarea>
       </div>
       ${rPhotos(iss)}
@@ -34385,7 +34409,7 @@ function renderAll(){
         <button class="photo-btn pin-btn" style="flex:0 0 auto;padding:10px 14px" onclick="document.getElementById('fic${iss.id}').click()">📷 Take Photo</button>
       </div>
     </div>
-  </div>`).join('');
+  </div>`;}).join('');
 }
 
 function rPhotos(iss){
@@ -35468,9 +35492,11 @@ async function renderInlinePlan(){
   section.classList.remove('hide');
   document.getElementById('inline-plan-name').textContent=plan.name;
   const canvas=document.getElementById('inline-plan-canvas');
-  // Show/hide Reset Layout button based on whether a crop is active
+  // Show/hide Reset Layout and Undo buttons based on crop state
   const resetBtn=document.getElementById('reset-crop-btn');
   if(resetBtn){resetBtn.classList.toggle('hide',!_planCrops[_activePlanId]);}
+  const undoBtn=document.getElementById('undo-crop-btn');
+  if(undoBtn){undoBtn.classList.toggle('hide',!(_cropHistory[_activePlanId]?.length));}
   const img=new Image();
   img.onload=()=>{
     _inlinePlanImgCache=img;
@@ -35589,33 +35615,81 @@ function _renderPlanPinPhotos(planPins){
 
 // ── Inline crop tool ─────────────────────────────────────────
 function startInlineCrop(){
-  _inlineCropMode=true;_icDragging=false;_icStart=null;
+  _inlineCropMode=true;_icPanMode=false;_icDragging=false;_icStart=null;_icPanCropAtStart=null;
   const canvas=document.getElementById('inline-plan-canvas');
-  if(canvas)canvas.classList.add('crop-mode');
+  if(canvas){canvas.classList.add('crop-mode');canvas.style.cursor='crosshair';}
   const btn=document.getElementById('crop-btn');
   if(btn){btn.textContent='✕ Cancel Crop';btn.classList.add('crop-active');}
-  toast('Drag to select the area to keep');
+  const panBtn=document.getElementById('crop-pan-btn');
+  if(panBtn){panBtn.classList.remove('hide');panBtn.textContent='✋ Pan';panBtn.classList.remove('crop-active');}
+  toast('Drag to select the area to keep · use Pan to scroll first');
+}
+
+function toggleCropPan(){
+  if(!_inlineCropMode)return;
+  _icPanMode=!_icPanMode;
+  _icDragging=false;_icStart=null;_icPanCropAtStart=null;
+  const canvas=document.getElementById('inline-plan-canvas');
+  if(canvas)canvas.style.cursor=_icPanMode?'grab':'crosshair';
+  const panBtn=document.getElementById('crop-pan-btn');
+  if(panBtn){panBtn.textContent=_icPanMode?'✁ Crop':'✋ Pan';panBtn.classList.toggle('crop-active',_icPanMode);}
+  toast(_icPanMode?'Drag to pan · tap Pan again to return to crop mode':'Drag to select the area to keep');
+}
+
+function undoInlineCrop(){
+  const history=_cropHistory[_activePlanId];
+  if(!history||!history.length){toast('Nothing to undo');return;}
+  const prev=history.pop();
+  if(prev===null||prev===undefined){delete _planCrops[_activePlanId];}
+  else{_planCrops[_activePlanId]=prev;}
+  if(!history.length)delete _cropHistory[_activePlanId];
+  const undoBtn=document.getElementById('undo-crop-btn');
+  if(undoBtn)undoBtn.classList.toggle('hide',!_cropHistory[_activePlanId]?.length);
+  const resetBtn=document.getElementById('reset-crop-btn');
+  if(resetBtn)resetBtn.classList.toggle('hide',!_planCrops[_activePlanId]);
+  renderInlinePlan();saveSt();
+}
+
+function _drawInlinePanPreview(canvas,nx1,ny1,cw,ch){
+  if(!_inlinePlanImgCache)return;
+  const img=_inlinePlanImgCache;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(img,nx1*img.naturalWidth,ny1*img.naturalHeight,cw*img.naturalWidth,ch*img.naturalHeight,0,0,canvas.width,canvas.height);
+  const planPins=pins.filter(p=>p.planId===_activePlanId);
+  planPins.forEach(pin=>{
+    const px=(pin.x-nx1)/cw*canvas.width;
+    const py=(pin.y-ny1)/ch*canvas.height;
+    if(px>-20&&px<canvas.width+20&&py>-20&&py<canvas.height+20)
+      _drawInlinePin(ctx,px,py,pins.indexOf(pin)+1,pin);
+  });
 }
 
 function resetInlineCrop(){
-  _inlineCropMode=false;_icDragging=false;_icStart=null;
+  _inlineCropMode=false;_icPanMode=false;_icDragging=false;_icStart=null;_icPanCropAtStart=null;
   delete _planCrops[_activePlanId];
+  delete _cropHistory[_activePlanId];
   const canvas=document.getElementById('inline-plan-canvas');
-  if(canvas)canvas.classList.remove('crop-mode');
+  if(canvas){canvas.classList.remove('crop-mode');canvas.style.cursor='pointer';}
   const btn=document.getElementById('crop-btn');
   if(btn){btn.textContent='✂ Crop Layout';btn.classList.remove('crop-active');}
+  const panBtn=document.getElementById('crop-pan-btn');
+  if(panBtn){panBtn.classList.add('hide');panBtn.classList.remove('crop-active');}
   const resetBtn=document.getElementById('reset-crop-btn');
   if(resetBtn)resetBtn.classList.add('hide');
-  renderInlinePlan();
+  const undoBtn=document.getElementById('undo-crop-btn');
+  if(undoBtn)undoBtn.classList.add('hide');
+  renderInlinePlan();saveSt();
 }
 
 function _cancelInlineCrop(){
-  _inlineCropMode=false;_icDragging=false;_icStart=null;
+  _inlineCropMode=false;_icPanMode=false;_icDragging=false;_icStart=null;_icPanCropAtStart=null;
   const canvas=document.getElementById('inline-plan-canvas');
-  if(canvas)canvas.classList.remove('crop-mode');
+  if(canvas){canvas.classList.remove('crop-mode');canvas.style.cursor='pointer';}
   const btn=document.getElementById('crop-btn');
   if(btn){btn.textContent='✂ Crop Layout';btn.classList.remove('crop-active');}
-  renderInlinePlan(); // restore clean view
+  const panBtn=document.getElementById('crop-pan-btn');
+  if(panBtn){panBtn.classList.add('hide');panBtn.classList.remove('crop-active');}
+  renderInlinePlan();
 }
 
 function _drawInlineCropOverlay(canvas,start,current){
@@ -35657,23 +35731,30 @@ function _drawInlineCropOverlay(canvas,start,current){
 }
 
 function _applyInlineCrop(canvas,start,end){
+  // Save current state to undo history before applying
+  if(!_cropHistory[_activePlanId])_cropHistory[_activePlanId]=[];
+  _cropHistory[_activePlanId].push(_planCrops[_activePlanId]?{..._planCrops[_activePlanId]}:null);
+  const undoBtn=document.getElementById('undo-crop-btn');
+  if(undoBtn)undoBtn.classList.remove('hide');
+  // Apply the new crop
   const x=Math.min(start.x,end.x)/canvas.width;
   const y=Math.min(start.y,end.y)/canvas.height;
   const x2=Math.max(start.x,end.x)/canvas.width;
   const y2=Math.max(start.y,end.y)/canvas.height;
   const existing=_planCrops[_activePlanId];
   if(existing){
-    // Compose with existing crop (zoom into a sub-region of already-cropped area)
     const cw=existing.x2-existing.x1,ch=existing.y2-existing.y1;
     _planCrops[_activePlanId]={x1:existing.x1+x*cw,y1:existing.y1+y*ch,x2:existing.x1+x2*cw,y2:existing.y1+y2*ch};
   } else {
     _planCrops[_activePlanId]={x1:x,y1:y,x2,y2};
   }
-  _inlineCropMode=false;
+  _inlineCropMode=false;_icPanMode=false;
   const btn=document.getElementById('crop-btn');
   if(btn){btn.textContent='✂ Crop Layout';btn.classList.remove('crop-active');}
-  canvas.classList.remove('crop-mode');
-  renderInlinePlan();
+  const panBtn=document.getElementById('crop-pan-btn');
+  if(panBtn){panBtn.classList.add('hide');panBtn.classList.remove('crop-active');}
+  canvas.classList.remove('crop-mode');canvas.style.cursor='pointer';
+  renderInlinePlan();saveSt();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -35687,37 +35768,82 @@ document.addEventListener('DOMContentLoaded',()=>{
     return{x:src.clientX-r.left,y:src.clientY-r.top};
   }
 
+  // Shared pan helper — updates crop position during drag
+  function _icApplyPanDelta(pos){
+    if(!_icPanCropAtStart)return;
+    const c=_icPanCropAtStart;
+    const cw=c.x2-c.x1,ch=c.y2-c.y1;
+    const dx=(pos.x-_icStart.x)*(cw/ic.width);
+    const dy=(pos.y-_icStart.y)*(ch/ic.height);
+    let nx1=Math.max(0,Math.min(1-cw,c.x1-dx));
+    let ny1=Math.max(0,Math.min(1-ch,c.y1-dy));
+    return{nx1,ny1,cw,ch};
+  }
+
   // Mouse events
   ic.addEventListener('mousedown',ev=>{
     if(!_inlineCropMode)return;
+    if(_icPanMode){
+      const c=_planCrops[_activePlanId];
+      if(!c){toast('Drag to crop the layout first, then use Pan to reposition');return;}
+      _icDragging=true;_icStart=_icPos(ev);_icPanCropAtStart={...c};
+      ic.style.cursor='grabbing';
+      return;
+    }
     _icDragging=true;_icStart=_icPos(ev);
   });
   ic.addEventListener('mousemove',ev=>{
     if(!_inlineCropMode||!_icDragging||!_icStart)return;
+    if(_icPanMode){
+      const r=_icApplyPanDelta(_icPos(ev));if(!r)return;
+      _drawInlinePanPreview(ic,r.nx1,r.ny1,r.cw,r.ch);
+      return;
+    }
     _drawInlineCropOverlay(ic,_icStart,_icPos(ev));
   });
   ic.addEventListener('mouseup',ev=>{
     if(!_inlineCropMode||!_icDragging||!_icStart)return;
     _icDragging=false;
+    if(_icPanMode){
+      const r=_icApplyPanDelta(_icPos(ev));
+      if(r){_planCrops[_activePlanId]={x1:r.nx1,y1:r.ny1,x2:r.nx1+r.cw,y2:r.ny1+r.ch};saveSt();}
+      _icStart=null;_icPanCropAtStart=null;
+      ic.style.cursor='grab';
+      renderInlinePlan();
+      return;
+    }
     const end=_icPos(ev);
     if(Math.abs(end.x-_icStart.x)<12||Math.abs(end.y-_icStart.y)<12){_cancelInlineCrop();return;}
     _applyInlineCrop(ic,_icStart,end);
     _icStart=null;
   });
   ic.addEventListener('mouseleave',()=>{
-    if(_inlineCropMode&&_icDragging){_icDragging=false;_icStart=null;_cancelInlineCrop();}
+    if(!_inlineCropMode||!_icDragging)return;
+    _icDragging=false;_icStart=null;
+    if(_icPanMode){_icPanCropAtStart=null;ic.style.cursor='grab';renderInlinePlan();}
+    else{_cancelInlineCrop();}
   });
 
   // Touch events (iPhone/iPad)
   ic.addEventListener('touchstart',ev=>{
     if(!_inlineCropMode)return;
     ev.preventDefault();
+    if(_icPanMode){
+      const c=_planCrops[_activePlanId];
+      if(!c){toast('Drag to crop the layout first, then use Pan to reposition');return;}
+      _icDragging=true;_icStart=_icPos(ev);_icPanCropAtStart={...c};
+      return;
+    }
     _icDragging=true;_icStart=_icPos(ev);
   },{passive:false});
   ic.addEventListener('touchmove',ev=>{
     if(!_inlineCropMode||!_icDragging||!_icStart)return;
     ev.preventDefault();
     const pos={x:ev.touches[0].clientX-ic.getBoundingClientRect().left,y:ev.touches[0].clientY-ic.getBoundingClientRect().top};
+    if(_icPanMode){
+      const r=_icApplyPanDelta(pos);if(r)_drawInlinePanPreview(ic,r.nx1,r.ny1,r.cw,r.ch);
+      return;
+    }
     _drawInlineCropOverlay(ic,_icStart,pos);
   },{passive:false});
   ic.addEventListener('touchend',ev=>{
@@ -35727,6 +35853,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     const t=ev.changedTouches[0];
     const r=ic.getBoundingClientRect();
     const end={x:t.clientX-r.left,y:t.clientY-r.top};
+    if(_icPanMode){
+      const pan=_icApplyPanDelta(end);
+      if(pan){_planCrops[_activePlanId]={x1:pan.nx1,y1:pan.ny1,x2:pan.nx1+pan.cw,y2:pan.ny1+pan.ch};saveSt();}
+      _icStart=null;_icPanCropAtStart=null;
+      renderInlinePlan();
+      return;
+    }
     if(Math.abs(end.x-_icStart.x)<12||Math.abs(end.y-_icStart.y)<12){_cancelInlineCrop();return;}
     _applyInlineCrop(ic,_icStart,end);
     _icStart=null;
@@ -36696,159 +36829,4 @@ async function clwRefetchPhotos(baseUrl, newVisitId, onProgress) {
 <input type="file" id="photo-zip-input" accept=".zip,application/zip" style="display:none" onchange="clwHandlePhotoFileInput(event)">
 
 <script>
-// ── Photo upload modal state ───────────────────────────────────────────
-let _pendingPhotoVisitId   = null;
-let _pendingPhotoProjectId = null;
-
-function clwOpenPhotoUpload(visitId, projectId, photoCount) {
-  _pendingPhotoVisitId   = visitId;
-  _pendingPhotoProjectId = projectId;
-  const desc = document.getElementById('photo-upload-desc');
-  if (desc) {
-    const c = photoCount > 0 ? ` (${photoCount} photo${photoCount !== 1 ? 's' : ''})` : '';
-    desc.textContent = `Visit data loaded. Drop in the photo zip you saved on site to restore all photos${c}.`;
-  }
-  document.getElementById('photo-upload-progress').style.display = 'none';
-  document.getElementById('photo-drop-zone').style.display = '';
-  document.getElementById('modal-photo-upload').classList.remove('hide');
-  document.getElementById('modal-photo-upload-backdrop').classList.remove('hide');
-}
-
-function clwClosePhotoUpload() {
-  document.getElementById('modal-photo-upload').classList.add('hide');
-  document.getElementById('modal-photo-upload-backdrop').classList.add('hide');
-}
-
-async function clwSkipPhotoUpload() {
-  clwClosePhotoUpload();
-  const pid = _pendingPhotoProjectId;
-  _pendingPhotoVisitId = null; _pendingPhotoProjectId = null;
-  if (pid) await openProject(pid);
-}
-
-// ── Drag-drop and file input handlers ───────────────────────────────
-function clwHandlePhotoDrop(event) {
-  const file = event.dataTransfer.files[0];
-  if (file) clwProcessPhotoZip(file);
-}
-function clwHandlePhotoFileInput(event) {
-  const file = event.target.files[0];
-  if (file) clwProcessPhotoZip(file);
-  event.target.value = '';
-}
-
-async function clwProcessPhotoZip(file) {
-  if (!_pendingPhotoVisitId) { toast('No visit selected', 3000); return; }
-  const progressEl = document.getElementById('photo-upload-progress');
-  const dropZone   = document.getElementById('photo-drop-zone');
-  dropZone.style.display = 'none';
-  progressEl.style.display = '';
-  progressEl.innerHTML = '<div style="font-size:13px;color:var(--clw-mid);text-align:center;padding:8px 0">⏳ Reading zip…</div>';
-  try {
-    const result = await importPhotosFromZip(_pendingPhotoVisitId, file, (done, total) => {
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      progressEl.innerHTML = `
-        <div style="font-size:13px;font-weight:700;color:var(--clw-dark);text-align:center;margin-bottom:10px">
-          📷 Importing ${done} / ${total} photos…
-        </div>
-        <div style="background:#e0e8f0;border-radius:20px;height:8px;overflow:hidden">
-          <div style="background:var(--clw-blue);height:100%;width:${pct}%;transition:width .25s;border-radius:20px"></div>
-        </div>`;
-    });
-    progressEl.innerHTML = `<div style="font-size:14px;font-weight:800;color:#16a34a;text-align:center;padding:8px 0">✓ ${result.imported} photo${result.imported !== 1 ? 's' : ''} restored</div>`;
-    await new Promise(r => setTimeout(r, 900));
-    clwClosePhotoUpload();
-    const pid = _pendingPhotoProjectId;
-    _pendingPhotoVisitId = null; _pendingPhotoProjectId = null;
-    if (pid) await openProject(pid);
-  } catch (err) {
-    progressEl.innerHTML = `<div style="font-size:13px;color:#c00;text-align:center;padding:8px 0">⚠ ${err.message}</div>`;
-    dropZone.style.display = '';
-    toast('Import failed: ' + err.message, 5000);
-  }
-}
-
-// ── Core zip import ─────────────────────────────────────────────────
-async function importPhotosFromZip(visitId, file, onProgress) {
-  const zip   = await new JSZip().loadAsync(file);
-  const visit = await dbGet('visits', visitId);
-  if (!visit) throw new Error('Visit not found in local storage');
-
-  let manifest = null;
-  if (zip.files['manifest.json']) {
-    try { manifest = JSON.parse(await zip.files['manifest.json'].async('string')); }
-    catch(e) { manifest = null; }
-  }
-
-  let imported = 0;
-
-  if (manifest) {
-    // Manifest-based: uses exact IDs recorded at download time
-    const entries = (manifest.photos || []).filter(e => zip.files[e.file]);
-    const total   = entries.length;
-    let done = 0;
-    for (const entry of entries) {
-      const b64  = await zip.files[entry.file].async('base64');
-      const mime = entry.mime || 'image/jpeg';
-      const du   = `data:${mime};base64,${b64}`;
-      if (entry.type === 'issue') {
-        const iss = (visit.issues || []).find(i => i.id === entry.issueId);
-        const ph  = iss && (iss.photos || []).find(p => p.id === entry.photoId);
-        if (ph) { ph.du = du; imported++; }
-      } else if (entry.type === 'pin') {
-        const pin = (visit.pins || []).find(p => p.id === entry.pinId);
-        if (pin && pin.photos && pin.photos[entry.photoIndex] !== undefined) {
-          pin.photos[entry.photoIndex].du = du; imported++;
-        }
-      } else if (entry.type === 'plan') {
-        await dbPut('planImages', { key: `v${visitId}_p${entry.planId}`, du });
-        imported++;
-      }
-      done++; if (onProgress) onProgress(done, total);
-    }
-  } else {
-    // Filename-based fallback (compatible with Drive sync naming convention)
-    const fileNames = Object.keys(zip.files).filter(f => !zip.files[f].dir && f !== 'manifest.json');
-    const total     = fileNames.length;
-    let done = 0;
-    const issueMap  = {};
-    for (const iss of (visit.issues || [])) issueMap[iss.id] = iss;
-    const photoPins = (visit.pins || []).filter(p => p.type === 'photo');
-    for (const fname of fileNames) {
-      const b64  = await zip.files[fname].async('base64');
-      const du   = `data:image/jpeg;base64,${b64}`;
-      const base = fname.split('/').pop();
-      let m;
-      if ((m = base.match(/^finding_(\d+)_photo_(\d+)\./))) {
-        const iss = issueMap[parseInt(m[1])];
-        const ph  = iss && iss.photos[parseInt(m[2]) - 1];
-        if (ph) { ph.du = du; imported++; }
-      } else if ((m = base.match(/^pin_P(\d+)([A-Z]?)\./))) {
-        const pin   = photoPins[parseInt(m[1]) - 1];
-        const phIdx = m[2] ? m[2].charCodeAt(0) - 65 : 0;
-        if (pin && pin.photos && pin.photos[phIdx] !== undefined) {
-          pin.photos[phIdx].du = du; imported++;
-        }
-      } else if ((m = base.match(/^plan_(\d+)\./))) {
-        await dbPut('planImages', { key: `v${visitId}_p${parseInt(m[1])}`, du });
-        imported++;
-      }
-      done++; if (onProgress) onProgress(done, total);
-    }
-  }
-
-  await dbPut('visits', visit);
-
-  // Refresh in-memory state if this visit is currently open
-  if (typeof currentVisitId !== 'undefined' && currentVisitId === visitId) {
-    issues = visit.issues || [];
-    pins   = visit.pins   || [];
-    renderAll();
-  }
-  return { imported };
-}
-</script>
-
-<!-- ════════════════════════════════════════════════════════
-     SAVE PHOTOS PROMPT (shown after manual sync)
-═════════════════════════════════════════════�
+// ── Photo upload modal state ───�
