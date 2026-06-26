@@ -34032,6 +34032,7 @@ async function openVisit(id){
   issues=visit.issues||[];iseq=visit.iseq||0;pseq=visit.pseq||0;
   plans=visit.plans||[];planSeq=visit.planSeq||0;
   pins=visit.pins||[];pnseq=visit.pnseq||0;
+  _planCrops=visit.planCrops||{};
   // Migrate old single-photo pins to photos array
   pins.forEach(pin=>{if(pin.photo!==undefined&&!pin.photos){pin.photos=pin.photo&&pin.photo.du?[pin.photo]:[];delete pin.photo;}else if(!pin.photos){pin.photos=[];}});
   _activePlanId=plans.length?plans[0].id:null;
@@ -34141,7 +34142,7 @@ function colState(){
   const rType=document.getElementById('report-type-input')?.value||'Site Progress Report';
   const concIncluded=!document.getElementById('conc-toggle')?.checked;
   const visitTitle=document.getElementById('visit-hdr-title')?.textContent?.trim()||'';
-  return{rType,concIncluded,visitTitle,issues,iseq,pseq,plans,planSeq,pins,pnseq,
+  return{rType,concIncluded,visitTitle,issues,iseq,pseq,plans,planSeq,pins,pnseq,planCrops:_planCrops,
     f:{subj:gv('f-subj'),cli:gv('f-cli'),clwr:gv('f-clwr'),cref:(()=>{const s=document.getElementById('f-cref');return s?.options[s.selectedIndex]?.text||'';})(),
        ref:gv('f-ref'),date:gv('f-date'),wx:gv('f-wx'),prep:gv('f-prep'),
        appr:gv('f-appr'),att:gv('f-att'),sum:gv('ta-sum'),gen:gv('ta-gen'),conc:gv('ta-conc')}};
@@ -34153,7 +34154,7 @@ async function saveCurrentVisit(){
   const existing=await dbGet('visits',currentVisitId);if(!existing)return;
   await dbPut('visits',{...existing,reportType:s.rType,concIncluded:s.concIncluded,
     visitTitle:s.visitTitle,issues:s.issues,iseq:s.iseq,pseq:s.pseq,plans:s.plans,planSeq:s.planSeq,
-    pins:s.pins,pnseq:s.pnseq,f:s.f,updatedAt:Date.now()});
+    pins:s.pins,pnseq:s.pnseq,planCrops:s.planCrops,f:s.f,updatedAt:Date.now()});
   _lastSaved=new Date();updateSyncStatus('saved');clwMarkDirty(currentVisitId);
 }
 
@@ -36850,5 +36851,4 @@ async function importPhotosFromZip(visitId, file, onProgress) {
 
 <!-- ════════════════════════════════════════════════════════
      SAVE PHOTOS PROMPT (shown after manual sync)
-════════════════════════════════════════════════════════ -->
-<div id="modal-save-photos-prompt" class=
+═════════════════════════════════════════════�
