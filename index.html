@@ -402,9 +402,9 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
     <div class="visit-hdr-actions">
       <button onclick="location.reload(true)" title="Reload app to pick up latest version" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:white;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">↺ Refresh</button>
       <div id="sync-status-v" class="sync-status sync-saved">● Saved</div>
-      <button id="manual-sync-btn" class="gen-btn hide" onclick="clwManualSync()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none"><span>☁</span> Sync</button>
-      <button class="gen-btn" id="dl-photos-btn" onclick="handleSavePhotos()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none"><span id="dl-photos-icon">⬇️</span> <span id="dl-photos-label">Save Photos</span></button>
-      <button class="gen-btn" id="dl-data-btn" onclick="downloadVisitDataBackup()" title="Download all findings, notes and details for this visit as a backup file — works offline, doesn't use Google Drive" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none"><span>💾</span> Save Data</button>
+      <button id="manual-sync-btn" class="gen-btn hide" onclick="clwManualSync()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span>☁</span> Sync</button>
+      <button class="gen-btn" id="dl-photos-btn" onclick="handleSavePhotos()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span id="dl-photos-icon">⬇️</span> <span id="dl-photos-label">Save Photos</span></button>
+      <button class="gen-btn" id="dl-data-btn" onclick="downloadVisitDataBackup()" title="Download all findings, notes and details for this visit as a backup file — works offline, doesn't use Google Drive" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span>💾</span> Save Data</button>
       <button class="gen-btn" id="gen-btn" onclick="generateReport()"><span>📄</span> Generate Report</button>
     </div>
     <div id="sync-hint"></div>
@@ -36064,7 +36064,7 @@ async function _gen(){
   const noB={top:bN,bottom:bN,left:bN,right:bN};
   const sp=(b=0,a=0)=>({spacing:{before:b,after:a}});
   const secHd=(txt,pageBreak=false)=>[new Paragraph({children:[new TextRun({text:txt,font:'Mulish',bold:true,size:40,color:BLUE})],border:{bottom:bB},pageBreakBefore:pageBreak,...sp(360,160)})];
-  const subHd=(txt)=>new Paragraph({children:[new TextRun({text:txt,font:'Mulish',bold:true,size:24,color:DARK})],...sp(200,80)});
+  const subHd=(txt,opts={})=>new Paragraph({children:[new TextRun({text:txt,font:'Mulish',bold:true,size:24,color:opts.color||DARK})],...(opts.underline?{border:{bottom:bB}}:{}),...sp(200,80)});
   const bLines=(txt,bold=false)=>{
     if(!txt||!txt.trim())return[];
     return txt.split('\n').map(l=>new Paragraph({children:[new TextRun({text:l,font:'Mulish',bold,size:22,color:DARK})],spacing:{before:120,after:160,line:264,lineRule:'auto'}}));
@@ -36112,7 +36112,7 @@ async function _gen(){
 
   // Issues — merge drag-drop photos + pinned photos
   const validIss=s.issues.filter(i=>i.title||i.desc||i.photos.length||pins.some(p=>p.issueId===i.id&&p.photos?.some(ph=>ph.du)));
-  if(validIss.length)children.push(subHd('Key Issues Identified'));
+  if(validIss.length)children.push(subHd('Key Issues Identified',{color:BLUE,underline:true}));
 
   const A4H_PX=Math.round(16838/1440*96);
   const IMG_H=Math.round(A4H_PX*0.35);  // all photos: 35% of A4 height
@@ -36147,7 +36147,7 @@ async function _gen(){
     const issPins=pins.filter(p=>p.issueId===iss.id&&p.photos?.some(ph=>ph.du));
     if(!iss.title&&!iss.desc&&!iss.photos.filter(p=>p.du).length&&!issPins.length)continue;
 
-    children.push(new Paragraph({numbering:{reference:'issue-list',level:0},children:[new TextRun({text:iss.title||'',font:'Mulish',bold:true,size:22,color:DARK})],...sp(160,80)}));
+    children.push(new Paragraph({numbering:{reference:'issue-list',level:0},children:[new TextRun({text:iss.title||'',font:'Mulish',bold:true,size:22,color:BLUE})],...sp(160,80)}));
     children.push(...bLines(iss.desc));
 
     // Drag-drop photos — exclude any that have been pinned (even if pin was moved to another issue)
@@ -36519,10 +36519,10 @@ window.addEventListener('offline', () => clwSetSyncEl('offline'));
 async function clwManualSync() {
   if (!CLW_GOOGLE.SCRIPT_URL) { toast('Google Drive not configured — add your Script URL in the app settings.', 5000); return; }
   if (!navigator.onLine) { toast('You appear to be offline — connect to WiFi first.', 4000); return; }
-  // Show save photos prompt immediately so user can do both at the same time
+  // Remind the user that photos aren't included in this sync — they need "Save Photos" for those
   const hasPhotos = (issues||[]).some(i=>(i.photos||[]).some(p=>p.du)) ||
                     (pins||[]).some(p=>p.type==='photo'&&(p.photos||[]).some(ph=>ph.du));
-  if (hasPhotos) clwShowSavePhotosPrompt();
+  if (hasPhotos) toast('Syncing data… use "Save Photos" separately to back up your photos.', 4000);
   // Sync runs in background — doesn't block the photo save
   clwProcessQueue();
 }
@@ -36540,11 +36540,19 @@ async function handleSavePhotos() {
     if (!total) { toast('No photos to save'); return; }
 
     const zipFile = new File([blob], filename, { type: 'application/zip' });
+    let shared = false;
     if (navigator.canShare && navigator.canShare({ files: [zipFile] })) {
-      // Mobile: native share sheet — user can choose Save to Files, AirDrop, WhatsApp etc.
-      await navigator.share({ files: [zipFile], title: filename });
-    } else {
-      // Desktop: trigger download
+      try {
+        // Mobile: native share sheet — user can choose Save to Files, AirDrop, WhatsApp etc.
+        await navigator.share({ files: [zipFile], title: filename });
+        shared = true;
+      } catch (shareErr) {
+        if (shareErr.name === 'AbortError') return; // user cancelled the share sheet — don't fall back
+        // Share blocked/denied (e.g. browser/permissions policy) — fall back to a normal download below
+      }
+    }
+    if (!shared) {
+      // Desktop, or share unavailable/denied: trigger a normal download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = filename;
@@ -37352,13 +37360,4 @@ let _pendingPhotoProjectId = null;
 
 function clwOpenPhotoUpload(visitId, projectId, photoCount) {
   _pendingPhotoVisitId   = visitId;
-  _pendingPhotoProjectId = projectId;
-  const desc = document.getElementById('photo-upload-desc');
-  if (desc) {
-    const c = photoCount > 0 ? ` (${photoCount} photo${photoCount !== 1 ? 's' : ''})` : '';
-    desc.textContent = `Visit data loaded. Drop in the photo zip you saved on site to restore all photos${c}.`;
-  }
-  document.getElementById('photo-upload-progress').style.display = 'none';
-  document.getElementById('photo-drop-zone').style.display = '';
-  document.getElementById('modal-photo-upload').classList.remove('hide');
-  document.getElementById('modal-photo-upload-backdrop').classL
+  _pendingPhotoProjectId = proje
