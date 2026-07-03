@@ -36064,7 +36064,7 @@ async function _gen(){
   const noB={top:bN,bottom:bN,left:bN,right:bN};
   const sp=(b=0,a=0)=>({spacing:{before:b,after:a}});
   const secHd=(txt,pageBreak=false)=>[new Paragraph({children:[new TextRun({text:txt,font:'Mulish',bold:true,size:40,color:BLUE})],border:{bottom:bB},pageBreakBefore:pageBreak,...sp(360,160)})];
-  const subHd=(txt,opts={})=>new Paragraph({children:[new TextRun({text:txt,font:'Mulish',bold:true,size:24,color:opts.color||DARK})],...(opts.underline?{border:{bottom:bB}}:{}),...sp(200,80)});
+  const subHd=(txt,opts={})=>new Paragraph({children:[new TextRun({text:txt,font:'Mulish',bold:true,size:opts.size||24,color:opts.color||DARK})],...(opts.underline?{border:{bottom:bB}}:{}),...sp(200,80)});
   const bLines=(txt,bold=false)=>{
     if(!txt||!txt.trim())return[];
     return txt.split('\n').map(l=>new Paragraph({children:[new TextRun({text:l,font:'Mulish',bold,size:22,color:DARK})],spacing:{before:120,after:160,line:264,lineRule:'auto'}}));
@@ -36112,7 +36112,7 @@ async function _gen(){
 
   // Issues — merge drag-drop photos + pinned photos
   const validIss=s.issues.filter(i=>i.title||i.desc||i.photos.length||pins.some(p=>p.issueId===i.id&&p.photos?.some(ph=>ph.du)));
-  if(validIss.length)children.push(subHd('Key Issues Identified',{color:BLUE,underline:true}));
+  if(validIss.length)children.push(subHd('Key Issues Identified',{color:BLUE,underline:true,size:40}));
 
   const A4H_PX=Math.round(16838/1440*96);
   const IMG_H=Math.round(A4H_PX*0.35);  // all photos: 35% of A4 height
@@ -36318,7 +36318,7 @@ async function _gen(){
   ]})]})]});
 
   const doc=new Document({
-    numbering:{config:[{reference:'issue-list',levels:[{level:0,format:'decimal',text:'%1.',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:440,hanging:440}}}}]}]},
+    numbering:{config:[{reference:'issue-list',levels:[{level:0,format:'decimal',text:'%1.',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:440,hanging:440}},run:{font:'Mulish',bold:true,size:22,color:BLUE}}}]}]},
     styles:{default:{document:{run:{font:'Arial',size:22}}}},
     sections:[{
       headers:{default:docHeader},footers:{default:docFooter},
@@ -37134,9 +37134,17 @@ async function clwImportVisit(meta, btn) {
   // 4. Save visit record
   const newVisitId = await dbPut('visits', cleanVisit);
 
-  // 5. Count photos to display in upload modal
-  const totalPhotos = (cleanVisit.plans || []).length
-    + (cleanVisit.pins  || []).reduce((s,p)=>s+(p.type==='photo'?(p.photos||[]).length:0),0)
+  // 4b. Auto-restore plan/drawing images now. Unlike bulk issue/pin photos
+  // (which stay a manual zip-drop to keep sync fast), a visit only ever has
+  // one or two plans, so we fetch them straight from Drive here rather than
+  // making the user hunt down the photo zip just to see the site plan again.
+  if ((cleanVisit.plans || []).length) {
+    try { await clwRefetchPlanImages(baseUrl, newVisitId, cleanVisit.plans); }
+    catch(err) { console.warn('Plan image auto-restore failed:', err.message); }
+  }
+
+  // 5. Count photos to display in upload modal (plans are already restored above)
+  const totalPhotos = (cleanVisit.pins  || []).reduce((s,p)=>s+(p.type==='photo'?(p.photos||[]).length:0),0)
     + (cleanVisit.issues|| []).reduce((s, iss) => s + (iss.photos||[]).length, 0);
 
   btn.disabled = false;
@@ -37237,6 +37245,23 @@ async function clwHandleRestoreBackup(event) {
 
   toast('Restored ' + restoredVisits + ' visit(s)' + (skippedVisits ? ', skipped ' + skippedVisits + ' (no matching project)' : '') + '.', 6000);
   await renderProjects();
+}
+
+// ── Re-fetch plan/drawing images from Drive and write to IndexedDB ────
+// Called automatically right after clwImportVisit() so a synced visit's
+// plan is never left showing the grey placeholder. Small/few files, so no
+// need to route this through the manual photo-zip workflow.
+async function clwRefetchPlanImages(baseUrl, visitId, plans) {
+  for (const pl of (plans || [])) {
+    try {
+      const url = baseUrl + '&action=getPhoto&filename=' + encodeURIComponent('plan_' + pl.id + '.jpg');
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const json = await resp.json();
+      if (json.error || !json.data) continue;
+      await dbPut('planImages', { key: 'v' + visitId + '_p' + pl.id, du: json.data });
+    } catch(err) { console.warn('Plan image fetch failed for plan ' + pl.id + ':', err.message); }
+  }
 }
 
 // ── Re-fetch photos from Drive and write to IndexedDB ────
@@ -37361,4 +37386,78 @@ async function clwRefetchPhotos(baseUrl, newVisitId, onProgress) {
 let _pendingPhotoVisitId   = null;
 let _pendingPhotoProjectId = null;
 
-function clwOpenPh
+function clwOpenPhotoUpload(visitId, projectId, photoCount) {
+  _pendingPhotoVisitId   = visitId;
+  _pendingPhotoProjectId = projectId;
+  const desc = document.getElementById('photo-upload-desc');
+  if (desc) {
+    const c = photoCount > 0 ? ` (${photoCount} photo${photoCount !== 1 ? 's' : ''})` : '';
+    desc.textContent = `Visit data loaded. Drop in the photo zip you saved on site to restore all photos${c}.`;
+  }
+  document.getElementById('photo-upload-progress').style.display = 'none';
+  document.getElementById('photo-drop-zone').style.display = '';
+  document.getElementById('modal-photo-upload').classList.remove('hide');
+  document.getElementById('modal-photo-upload-backdrop').classList.remove('hide');
+}
+
+function clwClosePhotoUpload() {
+  document.getElementById('modal-photo-upload').classList.add('hide');
+  document.getElementById('modal-photo-upload-backdrop').classList.add('hide');
+}
+
+async function clwSkipPhotoUpload() {
+  clwClosePhotoUpload();
+  const pid = _pendingPhotoProjectId;
+  _pendingPhotoVisitId = null; _pendingPhotoProjectId = null;
+  if (pid) await openProject(pid);
+}
+
+// ── Drag-drop and file input handlers ───────────────────────────────
+function clwHandlePhotoDrop(event) {
+  const file = event.dataTransfer.files[0];
+  if (file) clwProcessPhotoZip(file);
+}
+function clwHandlePhotoFileInput(event) {
+  const file = event.target.files[0];
+  if (file) clwProcessPhotoZip(file);
+  event.target.value = '';
+}
+
+async function clwProcessPhotoZip(file) {
+  if (!_pendingPhotoVisitId) { toast('No visit selected', 3000); return; }
+  const progressEl = document.getElementById('photo-upload-progress');
+  const dropZone   = document.getElementById('photo-drop-zone');
+  dropZone.style.display = 'none';
+  progressEl.style.display = '';
+  progressEl.innerHTML = '<div style="font-size:13px;color:var(--clw-mid)">⏳ Reading zip…</div>';
+
+  try {
+    const zip = await JSZip.loadAsync(file);
+
+    // manifest.json (written by buildPhotoZipBlob when the zip was created) tells us
+    // exactly which file belongs to which issue/pin/plan photo — so matching is
+    // reliable even if photo order or IDs have shifted.
+    const manifestEntry = zip.file('manifest.json');
+    if (!manifestEntry) throw new Error('No manifest.json found — this doesn’t look like a CLW photo zip');
+    const manifest = JSON.parse(await manifestEntry.async('string'));
+
+    const visit = await dbGet('visits', _pendingPhotoVisitId);
+    if (!visit) throw new Error('Visit not found — it may have been removed');
+
+    const total = (manifest.photos || []).length;
+    let done = 0, matched = 0;
+
+    for (const entry of (manifest.photos || [])) {
+      done++;
+      progressEl.innerHTML = `<div style="font-size:13px;color:var(--clw-mid)">⏳ Matching photos… ${done} / ${total}</div>`;
+
+      const zipFile = zip.file(entry.file);
+      if (!zipFile) continue; // photo missing from this particular zip — skip, don't fail the whole restore
+
+      const b64 = await zipFile.async('base64');
+      const du  = `data:${entry.mime || 'image/jpeg'};base64,${b64}`;
+
+      if (entry.type === 'issue') {
+        const iss = (visit.issues || []).find(i => i.id === entry.issueId);
+        const ph  = iss && (iss.photos || []).find(p => p.id === entry.photoId);
+        i
