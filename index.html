@@ -36088,7 +36088,7 @@ async function _renderAnnotatedPlan(du,planId){
         } else {
           px=pin.x*W;py=pin.y*H;
         }
-        _drawInlinePin(ctx,px,py,idx+1,pin);
+        _drawInlinePin(ctx,px,py,pins.indexOf(pin)+1,pin);
       });
       res(canvas.toDataURL('image/jpeg',0.88));
     };
@@ -36156,7 +36156,7 @@ async function _gen(){
   }
 
   // Site Findings
-  children.push(...secHd('Site Findings'));
+  children.push(...secHd('Site Findings',true));
   children.push(subHd('Site Visit Summary'));
   children.push(...bLines(F.gen));
 
@@ -36192,12 +36192,14 @@ async function _gen(){
     }catch(ex){console.warn('Photo error:',ex);}
   };
 
+  let _issueRendered=0;
   for(let idx=0;idx<s.issues.length;idx++){
     const iss=s.issues[idx];
     const issPins=pins.filter(p=>p.issueId===iss.id&&p.photos?.some(ph=>ph.du));
     if(!iss.title&&!iss.desc&&!iss.photos.filter(p=>p.du).length&&!issPins.length)continue;
 
-    children.push(new Paragraph({numbering:{reference:'issue-list',level:0},children:[new TextRun({text:iss.title||'',font:'Mulish',bold:true,size:22,color:BLUE})],...sp(160,80)}));
+    children.push(new Paragraph({numbering:{reference:'issue-list',level:0},pageBreakBefore:_issueRendered>0,children:[new TextRun({text:iss.title||'',font:'Mulish',bold:true,size:22,color:BLUE})],...sp(160,80)}));
+    _issueRendered++;
     children.push(...bLines(iss.desc));
 
     // Drag-drop photos — exclude any that have been pinned (even if pin was moved to another issue)
@@ -36311,11 +36313,12 @@ async function _gen(){
           new TableCell({shading:{type:ShadingType.CLEAR,color:'auto',fill:BLUE},borders:noB,width:{size:3000,type:WidthType.DXA},margins:{top:60,bottom:60,left:80,right:60},children:[new Paragraph({children:[new TextRun({text:'Issue',font:'Mulish',bold:true,size:18,color:'FFFFFF'})]})]}),
           new TableCell({shading:{type:ShadingType.CLEAR,color:'auto',fill:BLUE},borders:noB,width:{size:CDXA-3800,type:WidthType.DXA},margins:{top:60,bottom:60,left:80,right:60},children:[new Paragraph({children:[new TextRun({text:'Caption / Notes',font:'Mulish',bold:true,size:18,color:'FFFFFF'})]})]})
         ]});
-        const dataRows=planPins.map((pin,i)=>{
+        const dataRows=planPins.map((pin)=>{
+          const pinNum=pins.indexOf(pin)+1;
           const issIdx=issues.findIndex(x=>x.id===pin.issueId);
           const issTitle=issIdx>=0?(issIdx+1)+'. '+(issues[issIdx].title||'(untitled)'):'—';
           return new TableRow({children:[
-            new TableCell({borders:{top:bN,bottom:bT,left:bN,right:bN},width:{size:800,type:WidthType.DXA},margins:{top:60,bottom:60,left:80,right:60},children:[new Paragraph({children:[new TextRun({text:'P'+(i+1),font:'Mulish',bold:true,size:18,color:BLUE})]})]}) ,
+            new TableCell({borders:{top:bN,bottom:bT,left:bN,right:bN},width:{size:800,type:WidthType.DXA},margins:{top:60,bottom:60,left:80,right:60},children:[new Paragraph({children:[new TextRun({text:'P'+pinNum,font:'Mulish',bold:true,size:18,color:BLUE})]})]}) ,
             new TableCell({borders:{top:bN,bottom:bT,left:bN,right:bN},width:{size:3000,type:WidthType.DXA},margins:{top:60,bottom:60,left:80,right:60},children:[new Paragraph({children:[new TextRun({text:issTitle,font:'Mulish',size:18,color:DARK})]})]}),
             new TableCell({borders:{top:bN,bottom:bT,left:bN,right:bN},width:{size:CDXA-3800,type:WidthType.DXA},margins:{top:60,bottom:60,left:80,right:60},children:[new Paragraph({children:[new TextRun({text:pin.photos?.[0]?.cap||'',font:'Mulish',size:18,color:DARK})]})]})
           ]});
@@ -37578,11 +37581,4 @@ window.addEventListener('unhandledrejection', function(ev){
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('./service-worker.js').catch(function(err){
-      console.warn('Service worker registration failed:', err);
-    });
-  });
-}
-</script>
-</body>
-</html>
+  
