@@ -43,6 +43,10 @@ body{font-family:'Mulish',Arial,sans-serif;background:var(--bg);color:var(--clw-
 .sync-pending{background:rgba(255,160,0,.35);color:#fff3cd}
 /* ── Visit header action row ── */
 .visit-hdr-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:nowrap}
+/* Groups the Sync button with its "Saved/Pending" status pill so they can be
+   stacked (button above, status below) on narrow portrait phones without
+   touching the desktop/tablet layout, which stays a simple row. */
+.sync-group{display:flex;align-items:center;gap:8px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 /* ── Main content ── */
 .main{flex:1;max-width:900px;width:100%;margin:0 auto;padding:20px 16px 80px}
@@ -327,9 +331,15 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 #visit-hdr-title{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:none}
 [contenteditable]#visit-hdr-title{max-width:none}
 #screen-visit .visit-hdr-actions{width:100%;gap:4px}
-#screen-visit #sync-status-v{flex:0 0 auto;font-size:9px;text-align:center;padding:4px 7px}
+/* Sync button + its Saved/Pending status pill stack vertically (button on
+   top, pill underneath) instead of sitting side-by-side in the row — frees
+   up width for the other buttons. */
+#screen-visit .sync-group{flex-direction:column;align-items:stretch;flex:0 0 auto;gap:2px}
+#screen-visit #sync-status-v{order:2;flex:0 0 auto;font-size:9px;text-align:center;padding:3px 7px}
+/* All action buttons grow to fill the freed-up width and are tall enough for
+   two lines of text, except the Sync button (below) which stays one line. */
 #screen-visit .visit-hdr-actions .gen-btn{flex:1;min-width:0;font-size:10px;padding:6px 5px;gap:2px;justify-content:center;white-space:normal;text-align:center;line-height:1.15;min-height:34px}
-#screen-visit #manual-sync-btn{flex:0 0 auto;font-size:10px;padding:6px 8px;gap:2px;justify-content:center;white-space:normal;text-align:center;line-height:1.15;min-height:34px}
+#screen-visit #manual-sync-btn{order:1;flex:0 0 auto;font-size:10px;padding:6px 8px;gap:2px;justify-content:center;white-space:nowrap;text-align:center;line-height:1.15;min-height:0}
 #sync-hint{display:block}}
 /* Sync hint: shown below buttons in portrait when upload pending */
 #sync-hint{display:none;width:100%;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.8);padding:1px 0 3px;letter-spacing:.1px}
@@ -409,9 +419,11 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
       <span class="hdr-title" id="visit-hdr-title" contenteditable="true" spellcheck="false" title="Click to rename" onblur="saveSt()" oninput="saveSt()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">Site Visit</span>
     </div>
     <div class="visit-hdr-actions">
-      <button onclick="location.reload(true)" title="Reload app to pick up latest version" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:white;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">↺ Refresh</button>
-      <div id="sync-status-v" class="sync-status sync-saved">● Saved</div>
-      <button id="manual-sync-btn" class="gen-btn hide" onclick="clwManualSync()" title="Sync data only to G-Drive" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span>☁</span> Sync</button>
+      <button class="gen-btn" onclick="location.reload(true)" title="Reload app to pick up latest version" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:white;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:800;font-family:inherit;cursor:pointer">↺ Refresh</button>
+      <div class="sync-group" id="sync-group">
+        <div id="sync-status-v" class="sync-status sync-saved">● Saved</div>
+        <button id="manual-sync-btn" class="gen-btn hide" onclick="clwManualSync()" title="Sync data only to G-Drive" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span>☁</span> Sync</button>
+      </div>
       <button class="gen-btn" id="dl-photos-btn" onclick="handleSavePhotos()" title="Save photos to project folder" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span id="dl-photos-icon">⬇️</span> <span id="dl-photos-label">Save Photos</span></button>
       <button class="gen-btn" id="dl-data-btn" onclick="downloadVisitDataBackup()" title="Save data (offline) to .json file for backup" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);box-shadow:none;color:#fff"><span>💾</span> Save Data</button>
       <button class="gen-btn" id="gen-btn" onclick="generateReport()"><span>📄</span> Generate Report</button>
@@ -37567,18 +37579,4 @@ window.addEventListener('error', function(ev){
 window.addEventListener('unhandledrejection', function(ev){
   console.error('Unhandled promise rejection:', ev.reason);
   if (typeof toast === 'function') {
-    toast('⚠ Something went wrong. Please try again — if this keeps happening, reload the app.', 6000);
-  }
-});
-</script>
-
-<!-- ══════════════════════════════════════════════════════════
-     CLW PATCH v5 — Offline app-shell caching (Service Worker)
-     Makes the app load instantly from a local cache even with zero
-     signal (e.g. deep in a basement), by having the browser store a
-     copy of this page the first time it's opened with a connection,
-     then quietly refreshing that copy in the background whenever a
-     connection is available. Does not affect Drive sync, PDF upload,
-     or any saved visit data — those still require their own connection
-     as normal; this only protects the app shell itself from failing
-     to (re)load after the browser
+    toast('⚠ Something went wrong. Please try again — if this keeps happening, reload
