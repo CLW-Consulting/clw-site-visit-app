@@ -334,12 +334,12 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 /* Sync button + its Saved/Pending status pill stack vertically (button on
    top, pill underneath) instead of sitting side-by-side in the row — frees
    up width for the other buttons. */
-#screen-visit .sync-group{flex-direction:column;align-items:stretch;flex:0 0 auto;gap:2px}
-#screen-visit #sync-status-v{order:2;flex:0 0 auto;font-size:9px;text-align:center;padding:3px 7px}
+#screen-visit .sync-group{flex-direction:column;align-items:stretch;flex:0 0 auto;gap:1px}
+#screen-visit #sync-status-v{order:2;flex:0 0 auto;font-size:9px;line-height:1.2;text-align:center;padding:2px 7px}
 /* All action buttons grow to fill the freed-up width and are tall enough for
    two lines of text, except the Sync button (below) which stays one line. */
 #screen-visit .visit-hdr-actions .gen-btn{flex:1;min-width:0;font-size:10px;padding:6px 5px;gap:2px;justify-content:center;white-space:normal;text-align:center;line-height:1.15;min-height:34px}
-#screen-visit #manual-sync-btn{order:1;flex:0 0 auto;font-size:10px;padding:6px 8px;gap:2px;justify-content:center;white-space:nowrap;text-align:center;line-height:1.15;min-height:0}
+#screen-visit #manual-sync-btn{order:1;flex:0 0 auto;font-size:10px;padding:3px 8px;gap:2px;justify-content:center;white-space:nowrap;text-align:center;line-height:1.2;min-height:0}
 #sync-hint{display:block}}
 /* Sync hint: shown below buttons in portrait when upload pending */
 #sync-hint{display:none;width:100%;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.8);padding:1px 0 3px;letter-spacing:.1px}
@@ -37579,4 +37579,4 @@ window.addEventListener('error', function(ev){
 window.addEventListener('unhandledrejection', function(ev){
   console.error('Unhandled promise rejection:', ev.reason);
   if (typeof toast === 'function') {
-    toast('⚠ Something went wrong. Please try again — if this keeps happening, reload
+    toast('⚠ Something went wrong. Please try again — if this keeps ha
