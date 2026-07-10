@@ -328,8 +328,8 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 [contenteditable]#visit-hdr-title{max-width:none}
 #screen-visit .visit-hdr-actions{width:100%;gap:4px}
 #screen-visit #sync-status-v{flex:0 0 auto;font-size:9px;text-align:center;padding:4px 7px}
-#screen-visit .visit-hdr-actions .gen-btn{flex:1;min-width:0;font-size:10px;padding:6px 5px;gap:2px;justify-content:center}
-#screen-visit #manual-sync-btn{flex:0 0 auto;font-size:10px;padding:6px 8px;gap:2px;justify-content:center}
+#screen-visit .visit-hdr-actions .gen-btn{flex:1;min-width:0;font-size:10px;padding:6px 5px;gap:2px;justify-content:center;white-space:normal;text-align:center;line-height:1.15;min-height:34px}
+#screen-visit #manual-sync-btn{flex:0 0 auto;font-size:10px;padding:6px 8px;gap:2px;justify-content:center;white-space:normal;text-align:center;line-height:1.15;min-height:34px}
 #sync-hint{display:block}}
 /* Sync hint: shown below buttons in portrait when upload pending */
 #sync-hint{display:none;width:100%;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.8);padding:1px 0 3px;letter-spacing:.1px}
@@ -34651,42 +34651,49 @@ function _readExifOrientation(buffer) {
 }
 
 // Reads a photo File, corrects EXIF orientation, resizes to maxDim, returns JPEG data URL
+//
+// NOTE (fix, Jul 2026): this used to read the raw EXIF orientation tag and manually
+// re-apply a rotation/flip transform when drawing to canvas. Current mobile browsers
+// (iOS Safari, Android Chrome/WebView) already auto-rotate the image when they decode
+// it for an <img>/ImageBitmap, so re-applying the EXIF transform on top rotated the
+// image a second time — turning portrait photos (EXIF orientation 6, the most common
+// case for a phone held upright) into landscape. The fix is to stop re-applying our
+// own rotation and let the browser's built-in orientation handling do it once.
 async function processPhoto(file, maxDim, quality) {
   maxDim = maxDim || 2000; quality = quality || 0.85;
+  // Preferred path: createImageBitmap with an explicit orientation mode, so behaviour
+  // is consistent (not dependent on a particular browser's <img> decode quirks).
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      const nW = bmp.width, nH = bmp.height;
+      const s = Math.min(1, maxDim / Math.max(nW, nH));
+      const dw = Math.round(nW * s), dh = Math.round(nH * s);
+      const c = document.createElement('canvas');
+      c.width = dw; c.height = dh;
+      c.getContext('2d').drawImage(bmp, 0, 0, dw, dh);
+      if (bmp.close) bmp.close();
+      return c.toDataURL('image/jpeg', quality);
+    } catch (e) {
+      // fall through to the <img>-based path below
+    }
+  }
+  // Fallback for browsers without createImageBitmap/imageOrientation support: draw the
+  // already browser-oriented <img> as-is. Do NOT re-apply an EXIF transform here.
   return new Promise((res, rej) => {
-    const ar = new FileReader();
-    ar.onload = function(ev) {
-      const orient = _readExifOrientation(ev.target.result);
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = function() {
-        URL.revokeObjectURL(url);
-        const nW = img.naturalWidth, nH = img.naturalHeight;
-        // Orientations 5-8 have swapped visual width/height
-        const swapped = orient >= 5 && orient <= 8;
-        const visW = swapped ? nH : nW, visH = swapped ? nW : nH;
-        const s = Math.min(1, maxDim / Math.max(visW, visH));
-        const dw = Math.round(visW * s), dh = Math.round(visH * s);
-        const sw = Math.round(nW * s), sh = Math.round(nH * s);
-        const c = document.createElement('canvas');
-        c.width = dw; c.height = dh;
-        const ctx = c.getContext('2d');
-        // Apply EXIF orientation transform then draw the image
-        switch (orient) {
-          case 2: ctx.transform(-1,0,0,1,dw,0);         ctx.drawImage(img,0,0,dw,dh); break;
-          case 3: ctx.translate(dw,dh); ctx.rotate(Math.PI); ctx.drawImage(img,0,0,dw,dh); break;
-          case 4: ctx.transform(1,0,0,-1,0,dh);          ctx.drawImage(img,0,0,dw,dh); break;
-          case 5: ctx.transform(0,1,1,0,0,0);            ctx.drawImage(img,0,0,sw,sh); break;
-          case 6: ctx.translate(dw,0); ctx.rotate(Math.PI/2);  ctx.drawImage(img,0,0,sw,sh); break;
-          case 7: ctx.transform(0,-1,-1,0,dw,dh);        ctx.drawImage(img,0,0,sw,sh); break;
-          case 8: ctx.translate(0,dh); ctx.rotate(-Math.PI/2); ctx.drawImage(img,0,0,sw,sh); break;
-          default: ctx.drawImage(img,0,0,dw,dh);
-        }
-        res(c.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = rej; img.src = url;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      const nW = img.naturalWidth, nH = img.naturalHeight;
+      const s = Math.min(1, maxDim / Math.max(nW, nH));
+      const dw = Math.round(nW * s), dh = Math.round(nH * s);
+      const c = document.createElement('canvas');
+      c.width = dw; c.height = dh;
+      c.getContext('2d').drawImage(img, 0, 0, dw, dh);
+      res(c.toDataURL('image/jpeg', quality));
     };
-    ar.onerror = rej; ar.readAsArrayBuffer(file);
+    img.onerror = rej; img.src = url;
   });
 }
 
@@ -37574,11 +37581,4 @@ window.addEventListener('unhandledrejection', function(ev){
      connection is available. Does not affect Drive sync, PDF upload,
      or any saved visit data — those still require their own connection
      as normal; this only protects the app shell itself from failing
-     to (re)load after the browser discards a background tab.
-     Requires the app to be opened via its web address (not a local
-     file) — see service-worker.js in the same folder.
-══════════════════════════════════════════════════════════ -->
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function(){
-  
+     to (re)load after the browser
