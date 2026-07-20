@@ -237,6 +237,17 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 .ppg-item img{width:100%;height:100%;object-fit:cover;border-radius:5px;border:1px solid var(--brd);cursor:zoom-in}
 .ppg-rm{position:absolute;top:-5px;right:-5px;background:#dc2626;color:white;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;cursor:pointer;line-height:16px;text-align:center;padding:0;z-index:1}
 .ppg-lbl{position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.55);color:white;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;pointer-events:none}
+.ppg-split{position:absolute;top:-5px;left:-5px;background:var(--clw-blue);color:white;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;cursor:pointer;line-height:16px;text-align:center;padding:0;z-index:1}
+.ppg-split-menu{position:absolute;top:100%;left:0;margin-top:4px;background:white;border:1.5px solid var(--brd);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);padding:6px;z-index:20;display:flex;flex-direction:column;gap:5px;min-width:160px;white-space:nowrap}
+.ppg-split-menu button{font-family:inherit;font-size:11px;font-weight:700;border-radius:6px;border:1.5px solid var(--brd);background:white;color:var(--clw-dark);padding:5px 8px;cursor:pointer;text-align:left}
+.ppg-split-menu button:hover{border-color:var(--clw-blue);color:var(--clw-blue)}
+.ppg-split-move{display:flex;gap:4px;align-items:center}
+.ppg-split-move select{flex:1;min-width:0;font-size:11px;font-family:inherit;padding:4px;border-radius:6px;border:1.5px solid var(--brd)}
+.ppg-split-move button{flex-shrink:0}
+/* ── Drag-to-merge photo cards (issue gallery) ── */
+.pc2[data-drag-kind]{cursor:grab;touch-action:none}
+.pc2.pc-dragging{opacity:.4;border-color:var(--clw-blue)!important;cursor:grabbing}
+.pc2.pc-drop-target{outline:3px dashed var(--clw-blue);outline-offset:-3px;background:rgba(0,108,170,.06)}
 .pin-drop-zone{display:none;border:2px dashed var(--brd);border-radius:8px;padding:14px 10px;text-align:center;color:var(--clw-mid);font-size:12px;font-weight:600;cursor:default;transition:border-color .15s,background .15s;margin-bottom:10px;user-select:none}
 .pin-drop-zone.drag-over{border-color:var(--clw-blue);background:rgba(0,108,170,.07);color:var(--clw-blue)}
 .pin-drop-zone.has-photo{border-color:#16a34a;background:rgba(22,163,74,.06);color:#15803d}
@@ -313,6 +324,27 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
 .lb-rotate:hover{background:rgba(255,255,255,.28)}
 .lb-rotate:disabled{opacity:.4;cursor:default}
 .lb-rotate.lb-rotate-180{font-size:11px;letter-spacing:.3px}
+/* ── Photo markup (annotate) ── */
+.lb-markup-toolbar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2003;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;background:rgba(20,20,22,.9);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:8px 12px;max-width:94vw}
+.lbm-tools,.lbm-colors,.lbm-actions{display:flex;align-items:center;gap:6px}
+.lbm-tools{border-right:1px solid rgba(255,255,255,.2);padding-right:10px}
+.lbm-colors{border-right:1px solid rgba(255,255,255,.2);padding-right:10px}
+.lbm-tool{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:15px;width:32px;height:32px;border-radius:8px;cursor:pointer;line-height:1;font-family:'Mulish',Arial,sans-serif}
+.lbm-tool.active{background:#0a84ff;border-color:#0a84ff}
+.lbm-swatch{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.5);cursor:pointer;padding:0}
+.lbm-swatch.active{border-color:#fff;box-shadow:0 0 0 2px #0a84ff}
+.lbm-custom{width:24px;height:24px;padding:0;border:none;border-radius:50%;background:none;cursor:pointer}
+.lbm-actionbtn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:13px;font-weight:800;padding:6px 12px;border-radius:16px;cursor:pointer;font-family:'Mulish',Arial,sans-serif;white-space:nowrap}
+.lbm-actionbtn:disabled{opacity:.35;cursor:default}
+#lb-markup-canvas{position:fixed;z-index:2001;touch-action:none;cursor:crosshair}
+.lbm-text-input-wrap{position:fixed;z-index:2004}
+.lbm-text-input-wrap input{font-family:'Mulish',Arial,sans-serif;font-weight:700;font-size:16px;background:rgba(0,0,0,.75);color:#ff3b30;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:4px 8px;min-width:140px}
+@media(max-width:600px){
+.lb-markup-toolbar{gap:5px;padding:6px 8px;top:8px}
+.lbm-tools,.lbm-colors{padding-right:6px}
+.lbm-tool{width:28px;height:28px;font-size:13px}
+.lbm-swatch{width:18px;height:18px}
+.lbm-actionbtn{font-size:11px;padding:5px 8px}}
 .pt{cursor:zoom-in}
 /* ── Project-locked fields (read-only in visit form) ── */
 .proj-field-readonly{background:#f0f6fb!important;color:var(--clw-mid)!important;cursor:default!important;border-color:#c8dce9!important;font-style:italic}
@@ -666,11 +698,40 @@ textarea:focus{outline:none;border-color:var(--clw-blue);box-shadow:0 0 0 3px rg
     <button class="lb-rotate" onclick="lbRotateCCW()" title="Rotate anticlockwise">⟲</button>
     <button class="lb-rotate" onclick="lbRotateCW()" title="Rotate clockwise">⟳</button>
     <button class="lb-rotate lb-rotate-180" onclick="lbRotate180()" title="Rotate 180°">180°</button>
+    <button class="lb-rotate" id="lb-markup-btn" onclick="lbMarkupToggle()" title="Add markup / annotations">✎ Markup</button>
+  </div>
+  <div class="lb-markup-toolbar hide" id="lb-markup-toolbar">
+    <div class="lbm-tools">
+      <button class="lbm-tool" data-tool="select" title="Select / Move">↖</button>
+      <button class="lbm-tool" data-tool="rect" title="Rectangle">▭</button>
+      <button class="lbm-tool" data-tool="circle" title="Circle">◯</button>
+      <button class="lbm-tool" data-tool="cloud" title="Cloud">☁</button>
+      <button class="lbm-tool" data-tool="arrow" title="Arrow">↗</button>
+      <button class="lbm-tool" data-tool="pen" title="Freehand pen">✏</button>
+      <button class="lbm-tool" data-tool="text" title="Text">A</button>
+    </div>
+    <div class="lbm-colors">
+      <button class="lbm-swatch active" data-color="#ff3b30" style="background:#ff3b30" title="Red"></button>
+      <button class="lbm-swatch" data-color="#ffcc00" style="background:#ffcc00" title="Yellow"></button>
+      <button class="lbm-swatch" data-color="#34c759" style="background:#34c759" title="Green"></button>
+      <button class="lbm-swatch" data-color="#0a84ff" style="background:#0a84ff" title="Blue"></button>
+      <button class="lbm-swatch" data-color="#111111" style="background:#111111" title="Black"></button>
+      <button class="lbm-swatch" data-color="#ffffff" style="background:#ffffff;border-color:#999" title="White"></button>
+      <input type="color" id="lbm-custom-color" class="lbm-custom" value="#ff3b30" title="Custom colour">
+    </div>
+    <div class="lbm-actions">
+      <button class="lbm-actionbtn" onclick="lbMarkupUndo()" title="Undo">↺ Undo</button>
+      <button class="lbm-actionbtn" id="lbm-del-btn" onclick="lbMarkupDeleteSel()" title="Delete selected" disabled>🗑</button>
+      <button class="lbm-actionbtn" onclick="lbMarkupCancel()" title="Cancel, discard changes">✕ Cancel</button>
+      <button class="lbm-actionbtn" style="background:#0a84ff;border-color:#0a84ff" onclick="lbMarkupDone()" title="Save markup">✓ Done</button>
+    </div>
   </div>
   <button class="lb-arrow lb-prev" id="lb-prev" onclick="lbPrev()" title="Previous (←)">&#8249;</button>
   <div class="lightbox-img-wrap" id="lightbox-wrap">
     <img id="lightbox-img" src="" alt="" draggable="false">
   </div>
+  <canvas id="lb-markup-canvas" class="hide"></canvas>
+  <div class="lbm-text-input-wrap hide" id="lbm-text-input-wrap"><input type="text" id="lbm-text-input" placeholder="Type…"></div>
   <button class="lb-arrow lb-next" id="lb-next" onclick="lbNext()" title="Next (→)">&#8250;</button>
   <div class="lightbox-hint" id="lightbox-hint">Scroll or pinch to zoom · Drag to pan · Double-tap to reset</div>
   <div class="lb-counter" id="lb-counter" style="display:none"></div>
@@ -34556,11 +34617,26 @@ function renderAll(){
   </div>`;}).join('');
 }
 
+// Returns the set of iss.photos[].id values that have already been pinned to
+// the plan (via "📍 Pin to Plan" or a drag-merge onto an existing pin), so
+// they can be hidden from the unpinned gallery instead of showing twice.
+// Checks both the legacy single `pin.sourcePhotoId` field and the newer
+// `pin.sourcePhotoIds` array (a pin can absorb more than one original photo
+// once drag-to-merge is used more than once on the same pin).
+function _pinnedPhotoIdSet(iss){
+  const s=new Set();
+  pins.forEach(p=>{
+    if(p.sourcePhotoId!=null&&iss.photos.some(ph=>ph.id===p.sourcePhotoId))s.add(p.sourcePhotoId);
+    (p.sourcePhotoIds||[]).forEach(id=>{if(iss.photos.some(ph=>ph.id===id))s.add(id);});
+  });
+  return s;
+}
+
 function rPhotos(iss){
   const pp=pins.filter(p=>p.issueId===iss.id&&p.type==='photo'&&p.photos?.some(ph=>ph.du));
   const notePins=pins.filter(p=>p.issueId===iss.id&&p.type==='note');
   // Suppress drag-drop photos that have been pinned to ANY issue (even if the pin was later moved)
-  const pinnedPhotoIds=new Set(pins.filter(p=>p.sourcePhotoId!=null&&iss.photos.some(ph=>ph.id===p.sourcePhotoId)).map(p=>p.sourcePhotoId));
+  const pinnedPhotoIds=_pinnedPhotoIdSet(iss);
   const unpinnedPhotos=iss.photos.filter(ph=>!pinnedPhotoIds.has(ph.id));
   if(!unpinnedPhotos.length&&!pp.length&&!notePins.length)return'';
   let lbIdx=0; // tracks position in the full photo list for lightbox navigation
@@ -34576,9 +34652,9 @@ function rPhotos(iss){
   return`<div class="pg">${unpinnedPhotos.map(ph=>{
     const i=lbIdx++;
     const imgHtml=ph.du
-      ?`<img class="pt" src="${ph.du}" alt="" onclick="openIssueLightbox(${iss.id},${i})">`
+      ?`<img class="pt" src="${ph.duMarked||ph.du}" alt="" onclick="openIssueLightbox(${iss.id},${i})">`
       :`<div class="pt" style="background:#f0f2f5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;cursor:default"><div style="font-size:22px;opacity:.35">📷</div><div style="font-size:10px;color:var(--clw-mid);font-weight:700;text-align:center">Photo missing<br>Upload zip to restore</div></div>`;
-    return`<div class="pc2">
+    return`<div class="pc2"${ph.du&&plans.length?` data-drag-kind="photo" data-drag-ref='{"issueId":${iss.id},"photoId":${ph.id}}' onpointerdown="pcPointerDown(event)"`:''}>
       ${imgHtml}
       <div class="pf">
         <input class="pci" value="${e(ph.cap)}" placeholder="Caption…" oninput="ph_c(${iss.id},${ph.id},this.value)">
@@ -34593,8 +34669,8 @@ function rPhotos(iss){
     return phs.map((ph,pi)=>{
       const alpha=phs.length>1?String.fromCharCode(65+pi):'';
       const i=lbIdx++;
-      return`<div class="pc2">
-      <img class="pt" src="${ph.du}" alt="" onclick="openIssueLightbox(${iss.id},${i})">
+      return`<div class="pc2" data-drag-kind="pin" data-drag-ref='{"pinId":${pin.id}}' onpointerdown="pcPointerDown(event)">
+      <img class="pt" src="${ph.duMarked||ph.du}" alt="" onclick="openIssueLightbox(${iss.id},${i})">
       <div class="pf">
         <input class="pci" value="${e(ph.cap)}" placeholder="Caption…" oninput="updatePinPhotoCap(${pin.id},${pi},this.value)">
         <div class="sr"><span class="pin-num-link" onclick="openPlanAndFocusPin(${pin.id})" title="Open plan and edit pin">📍 P${pinNum}${alpha}</span>${ph.ts?`<span style="margin-left:4px">${_tsTag(ph.ts)}</span>`:''}</div>
@@ -34608,12 +34684,12 @@ function rPhotos(iss){
 function openIssueLightbox(issId,startIdx){
   const iss=issues.find(i=>i.id===issId);if(!iss)return;
   const pp=pins.filter(p=>p.issueId===iss.id&&p.type==='photo'&&p.photos?.some(ph=>ph.du));
-  const pinnedIds=new Set(pins.filter(p=>p.sourcePhotoId!=null&&iss.photos.some(ph=>ph.id===p.sourcePhotoId)).map(p=>p.sourcePhotoId));
+  const pinnedIds=_pinnedPhotoIdSet(iss);
   const items=[
-    ...iss.photos.filter(ph=>!pinnedIds.has(ph.id)).map(ph=>({src:ph.du,ref:{type:'issue',issueId:iss.id,photoId:ph.id}})),
+    ...iss.photos.filter(ph=>!pinnedIds.has(ph.id)).map(ph=>({src:ph.duMarked||ph.du,ref:{type:'issue',issueId:iss.id,photoId:ph.id}})),
     ...pp.flatMap(pin=>{
       const phs=(pin.photos||[]).filter(ph=>ph.du);
-      return phs.map((ph,idx)=>({src:ph.du,ref:{type:'pin',pinId:pin.id,idx}}));
+      return phs.map((ph,idx)=>({src:ph.duMarked||ph.du,ref:{type:'pin',pinId:pin.id,idx}}));
     })
   ];
   openLightbox(items,startIdx||0);
@@ -34624,7 +34700,7 @@ function openPinPhotoLightbox(pinId,idx){
   const pin=pins.find(p=>p.id===pinId);if(!pin)return;
   const phs=(pin.photos||[]).filter(ph=>ph.du);
   const ph=phs[idx];if(!ph)return;
-  openLightbox([{src:ph.du,ref:{type:'pin',pinId,idx}}],0);
+  openLightbox([{src:ph.duMarked||ph.du,ref:{type:'pin',pinId,idx}}],0);
 }
 
 // ── Photo processing: fix EXIF orientation + compress on ingest ──────────────
@@ -35334,6 +35410,98 @@ function onPinIssueChange(){
   else{ni.classList.add('hide');ni.value='';}
 }
 
+// ── Drag-to-merge photo cards (issue gallery) ────────────────────────────
+// Lets the user drag one photo card onto another, in the same issue's photo
+// gallery (rPhotos), to merge two pins together or attach an unpinned photo
+// to an existing pin — without needing to place a new pin on the plan first.
+// Built on Pointer Events (not native HTML5 drag/drop) because HTML5 DnD
+// does not work on touch devices, and this app is used heavily on phones
+// and tablets on site.
+let _pcDrag=null; // {kind,ref,el,startX,startY,moved,pointerId}
+
+function pcPointerDown(ev){
+  if(ev.target.closest('input,button,textarea,select'))return; // let normal controls work
+  const el=ev.currentTarget;
+  const kind=el.dataset.dragKind;if(!kind)return;
+  let ref={};try{ref=JSON.parse(el.dataset.dragRef||'{}');}catch(err){}
+  _pcDrag={kind,ref,el,startX:ev.clientX,startY:ev.clientY,moved:false,pointerId:ev.pointerId};
+}
+
+document.addEventListener('pointermove',function(ev){
+  if(!_pcDrag||ev.pointerId!==_pcDrag.pointerId)return;
+  const dx=ev.clientX-_pcDrag.startX,dy=ev.clientY-_pcDrag.startY;
+  if(!_pcDrag.moved){
+    if(Math.hypot(dx,dy)<10)return; // below drag threshold — treat as a tap/click
+    _pcDrag.moved=true;
+    _pcDrag.el.classList.add('pc-dragging');
+  }
+  ev.preventDefault();
+  document.querySelectorAll('.pc-drop-target').forEach(x=>x.classList.remove('pc-drop-target'));
+  const under=document.elementFromPoint(ev.clientX,ev.clientY);
+  const card=under&&under.closest('.pc2');
+  if(card&&card!==_pcDrag.el&&card.dataset.dragKind)card.classList.add('pc-drop-target');
+},{passive:false});
+
+function _pcEndDrag(ev,drop){
+  if(!_pcDrag||(ev&&ev.pointerId!==_pcDrag.pointerId))return;
+  const drag=_pcDrag;_pcDrag=null;
+  drag.el.classList.remove('pc-dragging');
+  document.querySelectorAll('.pc-drop-target').forEach(x=>x.classList.remove('pc-drop-target'));
+  if(!drop||!drag.moved||!ev)return; // plain tap — leave the normal onclick (lightbox) to handle it
+  const under=document.elementFromPoint(ev.clientX,ev.clientY);
+  const card=under&&under.closest('.pc2');
+  if(!card||card===drag.el||!card.dataset.dragKind)return;
+  let tgtRef={};try{tgtRef=JSON.parse(card.dataset.dragRef||'{}');}catch(err){}
+  _pcMerge(drag.kind,drag.ref,card.dataset.dragKind,tgtRef);
+}
+document.addEventListener('pointerup',function(ev){_pcEndDrag(ev,true);});
+document.addEventListener('pointercancel',function(ev){_pcEndDrag(ev,false);});
+
+function _pcResolveIssueId(kind,ref){
+  if(kind==='photo')return ref.issueId;
+  if(kind==='pin'){const p=pins.find(x=>x.id===ref.pinId);return p?p.issueId:null;}
+  return null;
+}
+
+// Performs the actual merge/attach once a card has been dropped onto another.
+// srcKind/tgtKind are 'photo' (an unpinned issue photo) or 'pin' (a photo
+// already placed on the plan, possibly with several photos of its own).
+function _pcMerge(srcKind,srcRef,tgtKind,tgtRef){
+  if(tgtKind!=='pin'){toast('Drop onto an already-pinned photo — pin one of these to the plan first');return;}
+  const target=pins.find(p=>p.id===tgtRef.pinId);
+  if(!target){toast('Pin not found');return;}
+  if(srcKind==='pin'&&srcRef.pinId===target.id)return; // dropped on itself
+  const srcIssueId=_pcResolveIssueId(srcKind,srcRef), tgtIssueId=_pcResolveIssueId(tgtKind,tgtRef);
+  if(srcIssueId!=null&&tgtIssueId!=null&&srcIssueId!==tgtIssueId){toast('Can only merge photos within the same issue');return;}
+  const tgtNum=pins.indexOf(target)+1;
+
+  if(srcKind==='pin'){
+    const source=pins.find(p=>p.id===srcRef.pinId);
+    if(!source){toast('Pin not found');return;}
+    const srcNum=pins.indexOf(source)+1;
+    if(!confirm(`Merge P${srcNum} into P${tgtNum}?\n\nP${srcNum} will be removed and its photo(s) added to P${tgtNum}.`))return;
+    if(!target.photos)target.photos=[];
+    (source.photos||[]).filter(ph=>ph.du).forEach(ph=>target.photos.push(Object.assign({},ph)));
+    const carried=[...(source.sourcePhotoIds||[]),...(source.sourcePhotoId!=null?[source.sourcePhotoId]:[])];
+    if(carried.length)target.sourcePhotoIds=[...(target.sourcePhotoIds||[]),...carried];
+    pins=pins.filter(p=>p.id!==source.id);
+    saveSt();renderAll();_drawPlan();renderInlinePlan();
+    if(typeof _editingPinId!=='undefined'&&_editingPinId===target.id&&typeof _refreshPinGallery==='function')_refreshPinGallery(target);
+    toast(`Merged → P${tgtNum} now has ${target.photos.filter(ph=>ph.du).length} photo(s) ✓`);
+  } else {
+    const iss=issues.find(i=>i.id===srcRef.issueId);
+    const ph=iss?iss.photos.find(p=>p.id===srcRef.photoId):null;
+    if(!ph){toast('Photo not found');return;}
+    if(!confirm(`Add this photo to P${tgtNum}?`))return;
+    if(!target.photos)target.photos=[];
+    target.photos.push({du:ph.du,tp:ph.tp,cap:ph.cap||'',nW:ph.nW,nH:ph.nH});
+    target.sourcePhotoIds=[...(target.sourcePhotoIds||[]),ph.id];
+    saveSt();renderAll();_drawPlan();renderInlinePlan();
+    if(typeof _editingPinId!=='undefined'&&_editingPinId===target.id&&typeof _refreshPinGallery==='function')_refreshPinGallery(target);
+    toast(`Added to P${tgtNum} ✓`);
+  }
+}
+
 function pinPhotoToMap(issueId,photoId){
   const iss=issues.find(i=>i.id===issueId);
   const photo=iss?.photos.find(p=>p.id===photoId);
@@ -35552,12 +35720,79 @@ function _refreshPinGallery(pin){
   gal.style.display='flex';
   gal.innerHTML=phs.map((ph,pi)=>{
     const alpha=phs.length>1?String.fromCharCode(65+pi):'';
+    // Split/move is only meaningful once a pin holds more than one photo —
+    // a single-photo pin is already "its own pin".
+    const splitBtn=phs.length>1?`<button class="ppg-split" onclick="_pinPhotoSplitMenu(${pin.id},${pi},this)" title="Split into a new pin, or move to another pin">⇄</button>`:'';
     return`<div class="ppg-item">
-      <img src="${ph.du}" alt="" onclick="openPinPhotoLightbox(${pin.id},${pi})">
+      <img src="${ph.duMarked||ph.du}" alt="" onclick="openPinPhotoLightbox(${pin.id},${pi})">
       <div class="ppg-lbl">P${pinNum}${alpha}</div>
+      ${splitBtn}
       <button class="ppg-rm" onclick="delPinPhoto(${pin.id},${pi});_refreshPinGallery(pins.find(p=>p.id===${pin.id}))" title="Remove this photo">✕</button>
     </div>`;
   }).join('');
+}
+
+// ── Split a multi-photo pin apart / move one photo to a different pin ────
+function _pinPhotoSplitMenu(pinId,idx,btnEl){
+  document.querySelectorAll('.ppg-split-menu').forEach(m=>m.remove());
+  const pin=pins.find(p=>p.id===pinId);if(!pin)return;
+  const otherPins=pins.filter(p=>p.id!==pinId&&p.planId===pin.planId&&p.type==='photo'&&p.issueId===pin.issueId&&p.photos?.some(ph=>ph.du));
+  const selId=`ppg-move-target-${pinId}-${idx}`;
+  const menu=document.createElement('div');
+  menu.className='ppg-split-menu';
+  menu.innerHTML=`
+    <button type="button" onclick="_pinPhotoSplitToNew(${pinId},${idx})">＋ Split into new pin</button>
+    ${otherPins.length?`<div class="ppg-split-move">
+      <select id="${selId}">${otherPins.map(p=>`<option value="${p.id}">Move to P${pins.indexOf(p)+1}</option>`).join('')}</select>
+      <button type="button" onclick="_pinPhotoMoveTo(${pinId},${idx},parseInt(document.getElementById('${selId}').value))">Move</button>
+    </div>`:''}
+  `;
+  btnEl.parentElement.style.position='relative';
+  btnEl.parentElement.appendChild(menu);
+  setTimeout(()=>{
+    document.addEventListener('click',function closeMenu(e){
+      if(!menu.contains(e.target)&&e.target!==btnEl){menu.remove();document.removeEventListener('click',closeMenu);}
+    });
+  },0);
+}
+
+function _pinPhotoSplitToNew(pinId,idx){
+  const pin=pins.find(p=>p.id===pinId);if(!pin)return;
+  const phs=(pin.photos||[]).filter(ph=>ph.du);
+  const ph=phs[idx];if(!ph)return;
+  if(!confirm('Split this photo out into its own new pin?'))return;
+  const realIdx=pin.photos.indexOf(ph);
+  pin.photos.splice(realIdx,1);
+  const newPin={id:++pnseq,planId:pin.planId,x:Math.max(0,Math.min(1,pin.x+0.02)),y:Math.max(0,Math.min(1,pin.y+0.02)),
+    issueId:pin.issueId,type:'photo',note:'',photos:[ph]};
+  pins.push(newPin);
+  if(!pin.photos.filter(p=>p.du).length)pins=pins.filter(p=>p.id!==pin.id);
+  saveSt();renderAll();_drawPlan();renderInlinePlan();
+  document.querySelectorAll('.ppg-split-menu').forEach(m=>m.remove());
+  const stillEditing=pins.find(p=>p.id===pinId);
+  _refreshPinGallery(stillEditing||newPin);
+  _showMergeRow(stillEditing||newPin);
+  toast(`Split into new pin P${pins.indexOf(newPin)+1} ✓`);
+}
+
+function _pinPhotoMoveTo(pinId,idx,targetPinId){
+  const pin=pins.find(p=>p.id===pinId);if(!pin)return;
+  const target=pins.find(p=>p.id===targetPinId);if(!target){toast('Target pin not found');return;}
+  const phs=(pin.photos||[]).filter(ph=>ph.du);
+  const ph=phs[idx];if(!ph)return;
+  const tgtNum=pins.indexOf(target)+1;
+  if(!confirm(`Move this photo to P${tgtNum}?`))return;
+  const realIdx=pin.photos.indexOf(ph);
+  pin.photos.splice(realIdx,1);
+  if(!target.photos)target.photos=[];
+  target.photos.push(ph);
+  if(!pin.photos.filter(p=>p.du).length)pins=pins.filter(p=>p.id!==pin.id);
+  saveSt();renderAll();_drawPlan();renderInlinePlan();
+  document.querySelectorAll('.ppg-split-menu').forEach(m=>m.remove());
+  const stillEditing=pins.find(p=>p.id===pinId);
+  _refreshPinGallery(stillEditing||target);
+  _showMergeRow(stillEditing||target);
+  toast(`Moved to P${tgtNum} ✓`);
 }
 
 // ── Pin merge ─────────────────────────────────────────────────
@@ -35734,7 +35969,7 @@ function _renderPinLegend(planPins){
   const pinRow=(pin,pinNum)=>{
     const txt=pin.type==='note'?e(pin.note||''):(pin.photos?.[0]?.cap?e(pin.photos[0].cap):'');
     const hasPhoto=pin.type==='photo'&&pin.photos?.[0]?.du;
-    const thumbHtml=hasPhoto?`<img src="${pin.photos[0].du}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;flex-shrink:0;cursor:pointer;border:1px solid var(--brd);transition:opacity .12s" onmouseenter="this.style.opacity='.75'" onmouseleave="this.style.opacity='1'" onclick="event.stopPropagation();openPlanAndFocusPin(${pin.id})" title="Edit pin">`:'';
+    const thumbHtml=hasPhoto?`<img src="${pin.photos[0].duMarked||pin.photos[0].du}" style="width:22px;height:22px;object-fit:cover;border-radius:4px;flex-shrink:0;cursor:pointer;border:1px solid var(--brd);transition:opacity .12s" onmouseenter="this.style.opacity='.75'" onmouseleave="this.style.opacity='1'" onclick="event.stopPropagation();openPlanAndFocusPin(${pin.id})" title="Edit pin">`:'';
     return`<div class="legend-row" onclick="scrollToPinIssue(${pin.id})" title="Jump to issue">
       <span class="legend-dot" style="background:#282828;cursor:pointer" onclick="event.stopPropagation();openPlanAndFocusPin(${pin.id})" title="Edit pin">${pinNum}</span>
       ${thumbHtml}
@@ -35783,7 +36018,7 @@ function _renderPlanPinPhotos(planPins){
   const photoPins=planPins.filter(p=>p.type==='photo'&&p.photos?.[0]?.du&&!p.issueId).map(p=>{
     const idx=pins.indexOf(p)+1;const ph0=p.photos[0];
     return`<div class="ppp-item" onclick="openPlanAndFocusPin(${p.id})" title="Click to assign to an issue">
-      <img class="ppp-img" src="${ph0.du}" alt="">
+      <img class="ppp-img" src="${ph0.duMarked||ph0.du}" alt="">
       <div class="ppp-lbl">P${idx}${p.photos.length>1?' ('+p.photos.length+')':''}</div>
       ${ph0.cap?`<div class="ppp-cap">${e(ph0.cap)}</div>`:''}
     </div>`;
@@ -36188,7 +36423,7 @@ async function _gen(){
   const colW=Math.floor(CDXA/2);
 
   const makePhCell=(ph)=>{
-    const buf=duBuf(ph.du);let tp=ph.tp||'jpeg';
+    const buf=duBuf(ph.duMarked||ph.du);let tp=ph.duMarked?'jpeg':(ph.tp||'jpeg');
     if(tp==='jpg')tp='jpeg';if(!['png','jpeg','gif','bmp'].includes(tp))tp='jpeg';
     const tH=IMG_H;
     const tW=(ph.nW&&ph.nH)?Math.round(tH*(ph.nW/ph.nH)):Math.round(tH*0.75);
@@ -36202,7 +36437,7 @@ async function _gen(){
     let tH,tW;
     if(ph.nW&&ph.nH){tH=IMG_H;tW=Math.round(tH*(ph.nW/ph.nH));if(tW>CPX){tW=CPX;tH=Math.round(tW*(ph.nH/ph.nW));}}
     else{tW=Math.round(CPX*0.7);tH=Math.round(tW*0.75);}
-    const buf=duBuf(ph.du);let tp=ph.tp||'jpeg';
+    const buf=duBuf(ph.duMarked||ph.du);let tp=ph.duMarked?'jpeg':(ph.tp||'jpeg');
     if(tp==='jpg')tp='jpeg';if(!['png','jpeg','gif','bmp'].includes(tp))tp='jpeg';
     const cap=ph.cap||'';
     try{
@@ -36222,7 +36457,7 @@ async function _gen(){
     children.push(...bLines(iss.desc));
 
     // Drag-drop photos — exclude any that have been pinned (even if pin was moved to another issue)
-    const _pinnedSrcIds=new Set(pins.filter(p=>p.sourcePhotoId!=null&&iss.photos.some(ph=>ph.id===p.sourcePhotoId)).map(p=>p.sourcePhotoId));
+    const _pinnedSrcIds=_pinnedPhotoIdSet(iss);
     const validPh=iss.photos.filter(p=>p.du&&!_pinnedSrcIds.has(p.id));
     let pi=0;
     while(pi<validPh.length){
@@ -36273,7 +36508,7 @@ async function _gen(){
     if(_pend)_rows.push([_pend]);
     // Render rows
     const _makePinCell=(item)=>{
-      const ph=item.photo;const buf=duBuf(ph.du);let tp=ph.tp||'jpeg';
+      const ph=item.photo;const buf=duBuf(ph.duMarked||ph.du);let tp=ph.duMarked?'jpeg':(ph.tp||'jpeg');
       if(tp==='jpg')tp='jpeg';if(!['png','jpeg','gif','bmp'].includes(tp))tp='jpeg';
       let iH=IMG_H,iW=(ph.nW&&ph.nH)?Math.round(IMG_H*(ph.nW/ph.nH)):Math.round(IMG_H*0.75);
       if(iW>Math.floor(CPX/2)){iW=Math.floor(CPX/2);iH=Math.round(iW*(ph.nH/ph.nW));}
@@ -36289,7 +36524,7 @@ async function _gen(){
           children.push(new Table({width:{size:CDXA,type:WidthType.DXA},columnWidths:[colW,colW],borders:{top:bN,bottom:bN,left:bN,right:bN,insideH:bN,insideV:bN},rows:[new TableRow({children:[_makePinCell(row[0]),_makePinCell(row[1])]})]}));
         }else{
           const item=row[0];const ph=item.photo;
-          const buf=duBuf(ph.du);let tp=ph.tp||'jpeg';
+          const buf=duBuf(ph.duMarked||ph.du);let tp=ph.duMarked?'jpeg':(ph.tp||'jpeg');
           if(tp==='jpg')tp='jpeg';if(!['png','jpeg','gif','bmp'].includes(tp))tp='jpeg';
           let iH=IMG_H,iW=(ph.nW&&ph.nH)?Math.round(IMG_H*(ph.nW/ph.nH)):Math.round(IMG_H*0.75);
           if(iW>CPX){iW=CPX;iH=Math.round(iW*(ph.nH/ph.nW));}
@@ -36650,17 +36885,15 @@ async function buildPhotoZipBlob() {
 
   // Issue photos (unpinned)
   for (const iss of issues) {
-    const pinnedIds = new Set(
-      pins.filter(p => p.sourcePhotoId != null && iss.photos.some(ph => ph.id === p.sourcePhotoId))
-          .map(p => p.sourcePhotoId)
-    );
+    const pinnedIds = _pinnedPhotoIdSet(iss);
     let n = 1;
     for (const ph of iss.photos.filter(ph => !pinnedIds.has(ph.id))) {
       if (!ph?.du) { n++; continue; }
-      const mime = ph.du.split(';')[0].replace('data:', '') || 'image/jpeg';
+      const _src = ph.duMarked || ph.du;
+      const mime = _src.split(';')[0].replace('data:', '') || 'image/jpeg';
       const ext  = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
       const filename = `finding_${iss.id}_photo_${n}.${ext}`;
-      const b64 = ph.du.split(',')[1];
+      const b64 = _src.split(',')[1];
       if (b64) {
         zip.file(filename, b64, { base64: true });
         manifest.photos.push({ file: filename, type: 'issue', issueId: iss.id, photoId: ph.id, n, mime });
@@ -36675,10 +36908,11 @@ async function buildPhotoZipBlob() {
     const phs = (pin.photos || []).filter(ph => ph?.du);
     phs.forEach((ph, pi) => {
       const letter = String.fromCharCode(65 + pi);
-      const mime = ph.du.split(';')[0].replace('data:', '') || 'image/jpeg';
+      const _src = ph.duMarked || ph.du;
+      const mime = _src.split(';')[0].replace('data:', '') || 'image/jpeg';
       const ext  = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
       const filename = `pin_P${pn}${letter}.${ext}`;
-      const b64 = ph.du.split(',')[1];
+      const b64 = _src.split(',')[1];
       if (b64) {
         zip.file(filename, b64, { base64: true });
         manifest.photos.push({ file: filename, type: 'pin', pinId: pin.id, pinNum: pn, photoIndex: pi, mime });
@@ -36773,6 +37007,158 @@ async function downloadVisitDataBackup() {
   }
 }
 
+// ── Photo markup (annotations) — shared helpers ─────────────────────────────
+// Each photo (ph) may carry ph.markup: an array of annotation objects drawn
+// on top of the base image, plus ph.duMarked: a cached flattened JPEG (base
+// photo + markup baked in) used everywhere the photo is displayed or
+// exported (thumbnails, Word report, zip export). ph.du itself is left
+// untouched so markup stays editable — reopening the markup editor always
+// starts from the clean original with the vector annotations redrawn on top.
+
+// Resolves an {type:'issue'|'pin', ...} lightbox ref back to its live photo object.
+function _lbResolvePhoto(ref){
+  if(!ref)return null;
+  if(ref.type==='issue'){
+    const iss=(typeof issues!=='undefined')?issues.find(i=>i.id===ref.issueId):null;
+    return iss?iss.photos.find(p=>p.id===ref.photoId):null;
+  } else if(ref.type==='pin'){
+    const pin=(typeof pins!=='undefined')?pins.find(p=>p.id===ref.pinId):null;
+    const phs=pin?(pin.photos||[]).filter(p=>p.du):[];
+    return phs[ref.idx]||null;
+  }
+  return null;
+}
+
+// Shared post-mutation refresh (used after rotate and after markup save).
+function _lbAfterPhotoMutated(ref){
+  if(typeof saveSt==='function')saveSt();
+  if(typeof renderAll==='function')renderAll();
+  if(typeof _drawPlan==='function')_drawPlan();
+  if(typeof renderInlinePlan==='function')renderInlinePlan();
+  if(ref&&ref.type==='pin'&&typeof _editingPinId!=='undefined'&&_editingPinId===ref.pinId&&typeof _refreshPinGallery==='function'){
+    const pin=(typeof pins!=='undefined')?pins.find(p=>p.id===ref.pinId):null;
+    if(pin)_refreshPinGallery(pin);
+  }
+}
+
+// Rotates a single normalized (0..1) point the same way _rotatePhotoData
+// rotates the underlying image pixels, so markup stays aligned after rotate.
+function _mkRotatePoint(nx,ny,deg){
+  if(deg===90)return[1-ny,nx];
+  if(deg===-90||deg===270)return[ny,1-nx];
+  if(deg===180)return[1-nx,1-ny];
+  return[nx,ny];
+}
+
+function _mkRotateMarkup(markup,deg){
+  return (markup||[]).map(m=>{
+    const mm=Object.assign({},m);
+    if(m.type==='arrow'){
+      const p1=_mkRotatePoint(m.x1,m.y1,deg),p2=_mkRotatePoint(m.x2,m.y2,deg);
+      mm.x1=p1[0];mm.y1=p1[1];mm.x2=p2[0];mm.y2=p2[1];
+    } else if(m.type==='pen'){
+      mm.pts=(m.pts||[]).map(p=>_mkRotatePoint(p[0],p[1],deg));
+    } else if(m.type==='text'){
+      const p=_mkRotatePoint(m.x,m.y,deg);mm.x=p[0];mm.y=p[1];
+    } else {
+      const corners=[[m.x,m.y],[m.x+m.w,m.y],[m.x,m.y+m.h],[m.x+m.w,m.y+m.h]].map(c=>_mkRotatePoint(c[0],c[1],deg));
+      const xs=corners.map(c=>c[0]),ys=corners.map(c=>c[1]);
+      const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+      mm.x=minX;mm.y=minY;mm.w=maxX-minX;mm.h=maxY-minY;
+    }
+    return mm;
+  });
+}
+
+// Draws a scalloped "revision cloud" outline inside the given box (px coords).
+function _mkDrawCloud(ctx,x,y,w,h){
+  const cx=x+w/2,cy=y+h/2,rx=Math.max(4,Math.abs(w)/2),ry=Math.max(4,Math.abs(h)/2);
+  const bumps=Math.max(8,Math.round((rx+ry)/13));
+  ctx.beginPath();
+  for(let i=0;i<=bumps;i++){
+    const a0=(i/bumps)*Math.PI*2,a1=((i+1)/bumps)*Math.PI*2;
+    const x0=cx+rx*Math.cos(a0),y0=cy+ry*Math.sin(a0);
+    const x1=cx+rx*Math.cos(a1),y1=cy+ry*Math.sin(a1);
+    const mx=(x0+x1)/2,my=(y0+y1)/2,bulge=1.18;
+    const bx=cx+(mx-cx)*bulge,by=cy+(my-cy)*bulge;
+    if(i===0)ctx.moveTo(x0,y0);
+    if(i<bumps)ctx.quadraticCurveTo(bx,by,x1,y1);
+  }
+  ctx.closePath();
+}
+
+function _mkDrawArrow(ctx,x1,y1,x2,y2,sw){
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(y2-y1,x2-x1),headLen=Math.max(12,sw*4.5);
+  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-headLen*Math.cos(ang-Math.PI/6),y2-headLen*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-headLen*Math.cos(ang+Math.PI/6),y2-headLen*Math.sin(ang+Math.PI/6));
+  ctx.closePath();ctx.fill();
+}
+
+// Draws every annotation in `markup` onto a canvas 2D context sized W×H
+// (device pixels). Shared by the live editor preview and the final flatten.
+function _mkDrawAll(ctx,markup,W,H){
+  (markup||[]).forEach(m=>{
+    ctx.save();
+    const color=m.color||'#ff3b30';
+    const sw=Math.max(2,Math.round(W*0.0055));
+    ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=sw;
+    ctx.lineJoin='round';ctx.lineCap='round';
+    if(m.type==='rect'){
+      ctx.strokeRect(m.x*W,m.y*H,m.w*W,m.h*H);
+    } else if(m.type==='circle'){
+      const cx=(m.x+m.w/2)*W,cy=(m.y+m.h/2)*H,rx=Math.abs(m.w*W/2),ry=Math.abs(m.h*H/2);
+      ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();
+    } else if(m.type==='cloud'){
+      _mkDrawCloud(ctx,m.x*W,m.y*H,m.w*W,m.h*H);ctx.stroke();
+    } else if(m.type==='arrow'){
+      _mkDrawArrow(ctx,m.x1*W,m.y1*H,m.x2*W,m.y2*H,sw);
+    } else if(m.type==='pen'&&m.pts&&m.pts.length){
+      ctx.beginPath();ctx.moveTo(m.pts[0][0]*W,m.pts[0][1]*H);
+      for(let i=1;i<m.pts.length;i++)ctx.lineTo(m.pts[i][0]*W,m.pts[i][1]*H);
+      ctx.stroke();
+    } else if(m.type==='text'){
+      const fs=Math.max(12,Math.round((m.size||0.038)*W));
+      ctx.font=`700 ${fs}px Mulish, Arial, sans-serif`;ctx.textBaseline='top';
+      ctx.lineWidth=Math.max(3,fs*0.14);ctx.strokeStyle='rgba(255,255,255,.88)';
+      ctx.strokeText(m.text||'',m.x*W,m.y*H);
+      ctx.fillStyle=color;ctx.fillText(m.text||'',m.x*W,m.y*H);
+    }
+    ctx.restore();
+  });
+}
+
+// Composites the base photo + its markup into a single flattened JPEG data
+// URL. Resolves null if there's no markup to bake in.
+function _mkCompose(baseSrc,markup,nW,nH){
+  return new Promise((resolve,reject)=>{
+    if(!markup||!markup.length){resolve(null);return;}
+    if(!baseSrc){resolve(null);return;}
+    const img=new Image();
+    img.onload=function(){
+      const c=document.createElement('canvas');
+      c.width=nW||img.naturalWidth;c.height=nH||img.naturalHeight;
+      const ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,c.width,c.height);
+      _mkDrawAll(ctx,markup,c.width,c.height);
+      resolve(c.toDataURL('image/jpeg',0.92));
+    };
+    img.onerror=reject;
+    img.src=baseSrc;
+  });
+}
+
+// Recomputes ph.duMarked from its current ph.du + ph.markup. Called after
+// the markup editor saves, after rotate, and after a photo is re-fetched
+// from Drive (the raw synced file only ever holds the clean original).
+async function _refreshPhotoMarkup(ph){
+  if(!ph)return;
+  if(!ph.markup||!ph.markup.length){ph.duMarked=null;return;}
+  try{ph.duMarked=await _mkCompose(ph.du,ph.markup,ph.nW,ph.nH);}
+  catch(err){console.warn('Markup compose failed:',err&&err.message);}
+}
+
 // ── Lightbox ─────────────────────────────────────────────────────────────────
 (function(){
   let _imgs=[], _cur=0, _scale=1, _tx=0, _ty=0;
@@ -36784,6 +37170,15 @@ async function downloadVisitDataBackup() {
   const lbHint= ()=>document.getElementById('lightbox-hint');
   const lbPrevBtn=()=>document.getElementById('lb-prev');
   const lbNextBtn=()=>document.getElementById('lb-next');
+
+  // ── Markup (annotate) editor state ──────────────────────────────────────
+  let _mkActive=false, _mkTool='select', _mkColor='#ff3b30';
+  let _mkPh=null, _mkRef=null, _mkOrigMarkup=null, _mkOrigDuMarked=null;
+  let _mkHistory=[], _mkSel=null, _mkDrag=null, _mkIdSeq=1;
+  const mkCanvas =()=>document.getElementById('lb-markup-canvas');
+  const mkToolbar=()=>document.getElementById('lb-markup-toolbar');
+  const mkTextWrap=()=>document.getElementById('lbm-text-input-wrap');
+  const mkTextInput=()=>document.getElementById('lbm-text-input');
 
   function applyTransform(){
     const img=lbImg();
@@ -36834,6 +37229,7 @@ async function downloadVisitDataBackup() {
   };
 
   window.closeLightbox=function(){
+    if(_mkActive)_mkExit(false); // discard any in-progress unsaved markup edit
     const el=lb();if(!el)return;
     el.style.display='none';
     document.body.style.overflow='';
@@ -36878,30 +37274,24 @@ async function downloadVisitDataBackup() {
   async function _rotateCurrent(degrees){
     const item=_imgs[_cur];
     if(!item||!item.ref){if(typeof toast==='function')toast('Cannot rotate this photo');return;}
+    if(_mkActive){if(typeof toast==='function')toast('Finish or cancel markup before rotating');return;}
     const btns=document.querySelectorAll('.lb-rotate');
     btns.forEach(b=>b.disabled=true);
     try{
-      const {du,nW,nH}=await _rotatePhotoData(item.src,degrees);
       const ref=item.ref;
-      let touchedPin=null;
-      if(ref.type==='issue'){
-        const iss=(typeof issues!=='undefined')?issues.find(i=>i.id===ref.issueId):null;
-        const ph=iss?iss.photos.find(p=>p.id===ref.photoId):null;
-        if(ph){ph.du=du;ph.nW=nW;ph.nH=nH;}
-      } else if(ref.type==='pin'){
-        const pin=(typeof pins!=='undefined')?pins.find(p=>p.id===ref.pinId):null;
-        const phs=pin?(pin.photos||[]).filter(p=>p.du):[];
-        const ph=phs[ref.idx];
-        if(ph){ph.du=du;ph.nW=nW;ph.nH=nH;touchedPin=pin;}
-      }
-      item.src=du;
+      const ph=_lbResolvePhoto(ref);
+      if(!ph){if(typeof toast==='function')toast('Cannot rotate this photo');return;}
+      // Always rotate the clean original (ph.du), never the flattened
+      // duMarked preview — markup coordinates are rotated separately below
+      // so they stay editable and correctly aligned on the new orientation.
+      const {du,nW,nH}=await _rotatePhotoData(ph.du,degrees);
+      ph.du=du;ph.nW=nW;ph.nH=nH;
+      if(ph.markup&&ph.markup.length)ph.markup=_mkRotateMarkup(ph.markup,degrees);
+      await _refreshPhotoMarkup(ph);
+      item.src=ph.duMarked||ph.du;
       resetTransform();
-      lbImg().src=du;
-      if(typeof saveSt==='function')saveSt();
-      if(typeof renderAll==='function')renderAll();
-      if(typeof _drawPlan==='function')_drawPlan();
-      if(typeof renderInlinePlan==='function')renderInlinePlan();
-      if(touchedPin&&typeof _editingPinId!=='undefined'&&_editingPinId===touchedPin.id&&typeof _refreshPinGallery==='function')_refreshPinGallery(touchedPin);
+      lbImg().src=item.src;
+      _lbAfterPhotoMutated(ref);
     }catch(err){
       if(typeof toast==='function')toast('Could not rotate photo');
     }finally{
@@ -36916,6 +37306,7 @@ async function downloadVisitDataBackup() {
   // Keyboard navigation
   document.addEventListener('keydown',function(e){
     const el=lb();if(!el||el.style.display==='none')return;
+    if(_mkActive){if(e.key==='Escape')window.lbMarkupCancel();return;}
     if(e.key==='Escape')window.closeLightbox();
     else if(e.key==='ArrowLeft')window.lbPrev();
     else if(e.key==='ArrowRight')window.lbNext();
@@ -36924,6 +37315,7 @@ async function downloadVisitDataBackup() {
   // Mouse wheel zoom
   document.addEventListener('wheel',function(e){
     const el=lb();if(!el||el.style.display==='none')return;
+    if(_mkActive)return;
     e.preventDefault();
     const delta=e.deltaY<0?1.15:1/1.15;
     _scale=Math.max(0.5,Math.min(8,_scale*delta));
@@ -36933,17 +37325,20 @@ async function downloadVisitDataBackup() {
   // Mouse drag to pan
   document.addEventListener('mousedown',function(e){
     const el=lb();if(!el||el.style.display==='none')return;
+    if(_mkActive)return;
     const tgt=e.target;
     if(tgt.classList.contains('lightbox-close')||tgt.classList.contains('lb-arrow')||tgt.classList.contains('lb-rotate'))return;
     _dragging=true;_dragStartX=e.clientX;_dragStartY=e.clientY;_baseTx=_tx;_baseTy=_ty;
   });
   document.addEventListener('mousemove',function(e){
+    if(_mkActive)return;
     if(!_dragging)return;
     _tx=_baseTx+(e.clientX-_dragStartX);
     _ty=_baseTy+(e.clientY-_dragStartY);
     applyTransform();
   });
   document.addEventListener('mouseup',function(e){
+    if(_mkActive)return;
     if(!_dragging)return;
     _dragging=false;
     // If barely moved, treat as click — if on backdrop, close
@@ -36957,6 +37352,7 @@ async function downloadVisitDataBackup() {
   // Touch: pinch zoom + drag + double-tap reset
   document.addEventListener('touchstart',function(e){
     const el=lb();if(!el||el.style.display==='none')return;
+    if(_mkActive)return;
     if(e.touches.length===1){
       const t=e.touches[0];
       _dragStartX=t.clientX;_dragStartY=t.clientY;_baseTx=_tx;_baseTy=_ty;
@@ -36975,6 +37371,7 @@ async function downloadVisitDataBackup() {
   },{passive:true});
   document.addEventListener('touchmove',function(e){
     const el=lb();if(!el||el.style.display==='none')return;
+    if(_mkActive)return;
     if(e.touches.length===1&&_dragging){
       const t=e.touches[0];
       _tx=_baseTx+(t.clientX-_dragStartX);
@@ -36991,6 +37388,387 @@ async function downloadVisitDataBackup() {
     }
   },{passive:false});
   document.addEventListener('touchend',function(){_dragging=false;},{passive:true});
+
+  // ── Markup (annotate) editor ────────────────────────────────────────────
+  // Entering markup mode resets zoom/pan to a plain fit-to-screen view and
+  // disables the lightbox's own pan/zoom/swipe handlers (guarded above via
+  // _mkActive) so canvas coordinates always map 1:1 onto the photo, on both
+  // mouse and touch — Pointer Events unify both input types.
+
+  function _mkNewId(){return 'm'+Date.now()+'_'+(_mkIdSeq++);}
+
+  function _mkSizeCanvas(){
+    const img=lbImg(), c=mkCanvas();
+    if(!img||!c)return;
+    const r=img.getBoundingClientRect();
+    c.style.left=r.left+'px';c.style.top=r.top+'px';
+    c.style.width=r.width+'px';c.style.height=r.height+'px';
+    const dpr=window.devicePixelRatio||1;
+    c.width=Math.max(1,Math.round(r.width*dpr));
+    c.height=Math.max(1,Math.round(r.height*dpr));
+    _mkRedraw();
+  }
+
+  function _mkRedraw(){
+    const c=mkCanvas();if(!c||!_mkPh)return;
+    const ctx=c.getContext('2d');
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,c.width,c.height);
+    _mkDrawAll(ctx,_mkPh.markup,c.width,c.height);
+    if(_mkSel){
+      const m=(_mkPh.markup||[]).find(x=>x.id===_mkSel);
+      if(m)_mkDrawHandles(ctx,m,c.width,c.height);
+    }
+  }
+
+  function _mkMeasureText(m,W){
+    const fs=Math.max(12,Math.round((m.size||0.038)*W));
+    const c=mkCanvas();
+    const ctx=c?c.getContext('2d'):document.createElement('canvas').getContext('2d');
+    ctx.save();ctx.font=`700 ${fs}px Mulish, Arial, sans-serif`;
+    const w=ctx.measureText(m.text||'').width;
+    ctx.restore();
+    return{w,h:fs*1.15};
+  }
+
+  function _mkBBoxPx(m,W,H){
+    if(m.type==='arrow')return{x1:m.x1*W,y1:m.y1*H,x2:m.x2*W,y2:m.y2*H};
+    if(m.type==='pen'){
+      const xs=m.pts.map(p=>p[0]*W),ys=m.pts.map(p=>p[1]*H);
+      return{x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};
+    }
+    if(m.type==='text'){
+      const t=_mkMeasureText(m,W);
+      return{x:m.x*W,y:m.y*H,w:t.w,h:t.h};
+    }
+    return{x:m.x*W,y:m.y*H,w:m.w*W,h:m.h*H};
+  }
+
+  function _mkDrawHandles(ctx,m,W,H){
+    ctx.save();
+    const hs=10;
+    const drawH=(x,y)=>{ctx.fillStyle='#0a84ff';ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.rect(x-hs/2,y-hs/2,hs,hs);ctx.fill();ctx.stroke();};
+    if(m.type==='arrow'){
+      drawH(m.x1*W,m.y1*H);drawH(m.x2*W,m.y2*H);
+    } else if(m.type==='pen'){
+      const b=_mkBBoxPx(m,W,H);
+      ctx.strokeStyle='rgba(10,132,255,.9)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+      ctx.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8);ctx.setLineDash([]);
+    } else if(m.type==='text'){
+      const b=_mkBBoxPx(m,W,H);
+      ctx.strokeStyle='rgba(10,132,255,.9)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+      ctx.strokeRect(b.x-3,b.y-3,b.w+6,b.h+6);ctx.setLineDash([]);
+      drawH(b.x+b.w,b.y+b.h);
+    } else {
+      const x=m.x*W,y=m.y*H,w=m.w*W,h=m.h*H;
+      ctx.strokeStyle='rgba(10,132,255,.9)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+      ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+      drawH(x,y);drawH(x+w,y);drawH(x,y+h);drawH(x+w,y+h);
+    }
+    ctx.restore();
+  }
+
+  function _mkPtSegDist(px,py,x1,y1,x2,y2){
+    const dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy;
+    let t=len2?((px-x1)*dx+(py-y1)*dy)/len2:0;
+    t=Math.max(0,Math.min(1,t));
+    return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+  }
+
+  // Returns {id,mode:'handle'|'body',handle?} for the topmost hit at (px,py)
+  // in canvas-pixel space. Handles of the currently-selected shape are
+  // checked first so resize/endpoint drags take priority over moving.
+  function _mkHitTest(px,py,W,H){
+    const HR=18;
+    if(_mkSel){
+      const m=(_mkPh.markup||[]).find(x=>x.id===_mkSel);
+      if(m){
+        if(m.type==='arrow'){
+          if(Math.hypot(px-m.x1*W,py-m.y1*H)<HR)return{id:m.id,mode:'handle',handle:'a1'};
+          if(Math.hypot(px-m.x2*W,py-m.y2*H)<HR)return{id:m.id,mode:'handle',handle:'a2'};
+        } else if(m.type==='text'){
+          const b=_mkBBoxPx(m,W,H);
+          if(Math.hypot(px-(b.x+b.w),py-(b.y+b.h))<HR)return{id:m.id,mode:'handle',handle:'se'};
+        } else if(m.type!=='pen'){
+          const x=m.x*W,y=m.y*H,w=m.w*W,h=m.h*H;
+          const corners={nw:[x,y],ne:[x+w,y],sw:[x,y+h],se:[x+w,y+h]};
+          for(const k in corners){if(Math.hypot(px-corners[k][0],py-corners[k][1])<HR)return{id:m.id,mode:'handle',handle:k};}
+        }
+      }
+    }
+    const arr=_mkPh.markup||[];
+    for(let i=arr.length-1;i>=0;i--){
+      const m=arr[i];
+      if(m.type==='arrow'){
+        if(_mkPtSegDist(px,py,m.x1*W,m.y1*H,m.x2*W,m.y2*H)<14)return{id:m.id,mode:'body'};
+      } else {
+        const b=_mkBBoxPx(m,W,H);
+        if(px>=b.x-6&&px<=b.x+b.w+6&&py>=b.y-6&&py<=b.y+b.h+6)return{id:m.id,mode:'body'};
+      }
+    }
+    return null;
+  }
+
+  function _mkPushHistory(){
+    _mkHistory.push(JSON.stringify(_mkPh.markup||[]));
+    if(_mkHistory.length>30)_mkHistory.shift();
+  }
+
+  function _mkCanvasPoint(evt){
+    const c=mkCanvas(),r=c.getBoundingClientRect();
+    return[(evt.clientX-r.left)*(c.width/r.width),(evt.clientY-r.top)*(c.height/r.height)];
+  }
+
+  function _mkSetTool(tool){
+    _mkTool=tool;
+    document.querySelectorAll('.lbm-tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+  }
+
+  function _mkSetColor(color){
+    _mkColor=color;
+    document.querySelectorAll('.lbm-swatch').forEach(b=>b.classList.toggle('active',b.dataset.color===color));
+    if(_mkSel){
+      const m=(_mkPh.markup||[]).find(x=>x.id===_mkSel);
+      if(m){_mkPushHistory();m.color=color;_mkRedraw();}
+    }
+  }
+
+  function _mkSelect(id){
+    _mkSel=id;
+    const del=document.getElementById('lbm-del-btn');
+    if(del)del.disabled=!id;
+    if(id){
+      const m=(_mkPh.markup||[]).find(x=>x.id===id);
+      if(m)document.querySelectorAll('.lbm-swatch').forEach(b=>b.classList.toggle('active',b.dataset.color===m.color));
+    }
+    _mkRedraw();
+  }
+
+  function _mkPointerDown(evt){
+    if(!_mkActive)return;
+    evt.preventDefault();
+    const c=mkCanvas();
+    if(c.setPointerCapture)try{c.setPointerCapture(evt.pointerId);}catch(err){}
+    const[px,py]=_mkCanvasPoint(evt);
+    const W=c.width,H=c.height;
+    if(_mkTool==='select'){
+      const hit=_mkHitTest(px,py,W,H);
+      if(hit&&hit.mode==='handle'){
+        _mkPushHistory();
+        _mkDrag={mode:'resize',id:hit.id,handle:hit.handle,orig:Object.assign({},(_mkPh.markup||[]).find(x=>x.id===hit.id)),startPx:px,startPy:py};
+      } else if(hit&&hit.mode==='body'){
+        _mkSelect(hit.id);
+        _mkPushHistory();
+        const m=(_mkPh.markup||[]).find(x=>x.id===hit.id);
+        _mkDrag={mode:'move',id:hit.id,startPx:px,startPy:py,orig:JSON.parse(JSON.stringify(m))};
+      } else {
+        _mkSelect(null);
+      }
+    } else if(_mkTool==='text'){
+      _mkOpenTextInput(px/W,py/H,evt.clientX,evt.clientY,null);
+    } else {
+      _mkPushHistory();
+      const nx=px/W,ny=py/H,id=_mkNewId();
+      let m;
+      if(_mkTool==='arrow')m={id,type:'arrow',color:_mkColor,x1:nx,y1:ny,x2:nx,y2:ny};
+      else if(_mkTool==='pen')m={id,type:'pen',color:_mkColor,pts:[[nx,ny]]};
+      else m={id,type:_mkTool,color:_mkColor,x:nx,y:ny,w:0,h:0};
+      _mkPh.markup=_mkPh.markup||[];
+      _mkPh.markup.push(m);
+      _mkDrag={mode:'draw',id,startNx:nx,startNy:ny};
+      _mkRedraw();
+    }
+  }
+
+  function _mkPointerMove(evt){
+    if(!_mkActive||!_mkDrag)return;
+    evt.preventDefault();
+    const c=mkCanvas(),W=c.width,H=c.height;
+    const[px,py]=_mkCanvasPoint(evt);
+    const nx=px/W,ny=py/H;
+    const arr=_mkPh.markup||[];
+    if(_mkDrag.mode==='draw'){
+      const m=arr.find(x=>x.id===_mkDrag.id);if(!m)return;
+      if(m.type==='arrow'){m.x2=nx;m.y2=ny;}
+      else if(m.type==='pen'){
+        const last=m.pts[m.pts.length-1];
+        if(Math.hypot((nx-last[0])*W,(ny-last[1])*H)>3)m.pts.push([nx,ny]);
+      } else {
+        m.x=Math.min(_mkDrag.startNx,nx);m.y=Math.min(_mkDrag.startNy,ny);
+        m.w=Math.abs(nx-_mkDrag.startNx);m.h=Math.abs(ny-_mkDrag.startNy);
+      }
+    } else if(_mkDrag.mode==='move'){
+      const m=arr.find(x=>x.id===_mkDrag.id);if(!m)return;
+      const dnx=(px-_mkDrag.startPx)/W,dny=(py-_mkDrag.startPy)/H,o=_mkDrag.orig;
+      if(m.type==='arrow'){m.x1=o.x1+dnx;m.y1=o.y1+dny;m.x2=o.x2+dnx;m.y2=o.y2+dny;}
+      else if(m.type==='pen'){m.pts=o.pts.map(p=>[p[0]+dnx,p[1]+dny]);}
+      else {m.x=o.x+dnx;m.y=o.y+dny;}
+    } else if(_mkDrag.mode==='resize'){
+      const m=arr.find(x=>x.id===_mkDrag.id);if(!m)return;
+      const o=_mkDrag.orig;
+      if(m.type==='arrow'){
+        if(_mkDrag.handle==='a1'){m.x1=nx;m.y1=ny;}else{m.x2=nx;m.y2=ny;}
+      } else if(m.type==='text'){
+        const dist0=Math.hypot(_mkDrag.startPx-o.x*W,_mkDrag.startPy-o.y*H)||1;
+        const dist1=Math.hypot(px-o.x*W,py-o.y*H);
+        m.size=Math.max(0.015,Math.min(0.25,(o.size||0.038)*(dist1/dist0)));
+      } else {
+        let x0=o.x,y0=o.y,x1=o.x+o.w,y1=o.y+o.h;
+        if(_mkDrag.handle==='nw'){x0=nx;y0=ny;}
+        else if(_mkDrag.handle==='ne'){x1=nx;y0=ny;}
+        else if(_mkDrag.handle==='sw'){x0=nx;y1=ny;}
+        else if(_mkDrag.handle==='se'){x1=nx;y1=ny;}
+        m.x=Math.min(x0,x1);m.y=Math.min(y0,y1);m.w=Math.abs(x1-x0);m.h=Math.abs(y1-y0);
+      }
+    }
+    _mkRedraw();
+  }
+
+  function _mkPointerUp(){
+    if(!_mkActive||!_mkDrag)return;
+    if(_mkDrag.mode==='draw'){
+      const m=(_mkPh.markup||[]).find(x=>x.id===_mkDrag.id);
+      const tiny=m&&((m.type==='pen'&&m.pts.length<2)||
+        (m.type==='arrow'&&Math.hypot(m.x2-m.x1,m.y2-m.y1)<0.01)||
+        (m.w!==undefined&&m.w<0.012&&m.h<0.012));
+      if(tiny){_mkPh.markup=_mkPh.markup.filter(x=>x.id!==_mkDrag.id);_mkHistory.pop();}
+      else{_mkSelect(m.id);_mkSetTool('select');}
+    }
+    _mkDrag=null;
+    _mkRedraw();
+  }
+
+  function _mkOpenTextInput(nx,ny,clientX,clientY,existing){
+    const wrap=mkTextWrap(),inp=mkTextInput();
+    if(!wrap||!inp)return;
+    const vw=window.innerWidth,vh=window.innerHeight;
+    wrap.style.left=Math.min(clientX,vw-160)+'px';
+    wrap.style.top=Math.min(clientY,vh-50)+'px';
+    wrap.classList.remove('hide');
+    inp.value=existing?(existing.text||''):'';
+    inp.style.color=existing?existing.color:_mkColor;
+    setTimeout(()=>{inp.focus();inp.select();},10);
+    let done=false;
+    const commit=()=>{
+      if(done)return;done=true;
+      wrap.classList.add('hide');
+      inp.removeEventListener('keydown',onKey);
+      inp.removeEventListener('blur',onBlur);
+      const val=inp.value.trim();
+      if(existing){
+        if(val){_mkPushHistory();existing.text=val;}
+      } else if(val){
+        _mkPushHistory();
+        const id=_mkNewId();
+        _mkPh.markup=_mkPh.markup||[];
+        _mkPh.markup.push({id,type:'text',color:_mkColor,x:nx,y:ny,text:val,size:0.038});
+        _mkSelect(id);_mkSetTool('select');
+      }
+      _mkRedraw();
+    };
+    const onKey=e=>{
+      if(e.key==='Enter'){e.preventDefault();inp.blur();}
+      else if(e.key==='Escape'){inp.value='';inp.blur();}
+    };
+    const onBlur=()=>commit();
+    inp.addEventListener('keydown',onKey);
+    inp.addEventListener('blur',onBlur);
+  }
+
+  function _mkEnter(){
+    const item=_imgs[_cur];
+    if(!item||!item.ref)return;
+    const ph=_lbResolvePhoto(item.ref);
+    if(!ph){if(typeof toast==='function')toast('Cannot markup this photo');return;}
+    _mkPh=ph;_mkRef=item.ref;
+    _mkOrigMarkup=JSON.stringify(ph.markup||[]);
+    _mkOrigDuMarked=ph.duMarked||null;
+    ph.markup=ph.markup||[];
+    _mkHistory=[];_mkSel=null;_mkActive=true;_mkColor='#ff3b30';
+    resetTransform(); // markup edits at a plain fit-to-screen view only
+    const tb=mkToolbar();if(tb)tb.classList.remove('hide');
+    document.querySelectorAll('.lb-rotate').forEach(b=>{if(b.id!=='lb-markup-btn')b.style.display='none';});
+    const mb=document.getElementById('lb-markup-btn');if(mb)mb.textContent='✕ Close Markup';
+    if(lbPrevBtn())lbPrevBtn().style.display='none';
+    if(lbNextBtn())lbNextBtn().style.display='none';
+    if(lbHint())lbHint().style.display='none';
+    _mkSetTool('select');
+    document.querySelectorAll('.lbm-swatch').forEach(b=>b.classList.toggle('active',b.dataset.color==='#ff3b30'));
+    const c=mkCanvas();if(c)c.classList.remove('hide');
+    requestAnimationFrame(_mkSizeCanvas);
+  }
+
+  async function _mkExit(save){
+    if(!_mkActive)return;
+    const ph=_mkPh,ref=_mkRef;
+    _mkActive=false;
+    if(mkTextWrap())mkTextWrap().classList.add('hide');
+    const tb=mkToolbar();if(tb)tb.classList.add('hide');
+    const c=mkCanvas();if(c)c.classList.add('hide');
+    document.querySelectorAll('.lb-rotate').forEach(b=>{b.style.display='';});
+    const mb=document.getElementById('lb-markup-btn');if(mb)mb.textContent='✎ Markup';
+    if(_imgs.length>1){if(lbPrevBtn())lbPrevBtn().style.display='';if(lbNextBtn())lbNextBtn().style.display='';}
+    if(lbHint())lbHint().style.display='';
+    if(ph&&!save){
+      ph.markup=JSON.parse(_mkOrigMarkup||'[]');
+      ph.duMarked=_mkOrigDuMarked;
+    }
+    if(ph&&save){
+      if(typeof toast==='function')toast('Saving markup…',1200);
+      await _refreshPhotoMarkup(ph);
+      _lbAfterPhotoMutated(ref);
+    }
+    const item=_imgs[_cur];
+    if(item&&ph)item.src=ph.duMarked||ph.du;
+    if(lbImg())lbImg().src=item?item.src:'';
+    _mkPh=null;_mkRef=null;_mkSel=null;_mkHistory=[];_mkDrag=null;
+  }
+
+  window.lbMarkupToggle=function(){ _mkActive?_mkExit(true):_mkEnter(); };
+  window.lbMarkupDone=function(){ _mkExit(true); };
+  window.lbMarkupCancel=function(){ _mkExit(false); };
+  window.lbMarkupUndo=function(){
+    if(!_mkActive||!_mkHistory.length)return;
+    _mkPh.markup=JSON.parse(_mkHistory.pop());
+    _mkSelect(null);
+  };
+  window.lbMarkupDeleteSel=function(){
+    if(!_mkActive||!_mkSel)return;
+    _mkPushHistory();
+    _mkPh.markup=(_mkPh.markup||[]).filter(m=>m.id!==_mkSel);
+    _mkSelect(null);
+  };
+
+  function _mkWire(){
+    const tb=mkToolbar();if(!tb)return;
+    tb.addEventListener('click',function(e){
+      const toolBtn=e.target.closest('.lbm-tool');
+      if(toolBtn){_mkSetTool(toolBtn.dataset.tool);return;}
+      const swatch=e.target.closest('.lbm-swatch');
+      if(swatch){_mkSetColor(swatch.dataset.color);return;}
+    });
+    const custom=document.getElementById('lbm-custom-color');
+    if(custom)custom.addEventListener('input',function(){_mkSetColor(this.value);});
+    const c=mkCanvas();
+    if(c){
+      c.addEventListener('pointerdown',_mkPointerDown);
+      c.addEventListener('pointermove',_mkPointerMove);
+      c.addEventListener('pointerup',_mkPointerUp);
+      c.addEventListener('pointercancel',_mkPointerUp);
+      c.addEventListener('dblclick',function(e){
+        if(!_mkActive||_mkTool!=='select')return;
+        const[px,py]=_mkCanvasPoint(e);
+        const hit=_mkHitTest(px,py,c.width,c.height);
+        if(hit){
+          const m=(_mkPh.markup||[]).find(x=>x.id===hit.id);
+          if(m&&m.type==='text')_mkOpenTextInput(m.x,m.y,e.clientX,e.clientY,m);
+        }
+      });
+    }
+    window.addEventListener('resize',function(){if(_mkActive)_mkSizeCanvas();});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_mkWire);
+  else _mkWire();
 })();
 
 </script>
@@ -37379,7 +38157,12 @@ async function clwRefetchPhotos(baseUrl, newVisitId, onProgress) {
           // Try new multi-photo naming first, fall back to legacy single-photo name for pi===0
           let du = await fetchPhoto(`pin_P${pn}${String.fromCharCode(65+pi)}.jpg`).catch(()=>null);
           if(!du && pi===0) du = await fetchPhoto(`pin_P${pn}.jpg`).catch(()=>null);
-          if(du) pin.photos[pi].du = du;
+          if(du) {
+            pin.photos[pi].du = du;
+            // Drive only ever stores the clean original — re-bake any saved
+            // markup on top of the freshly-fetched pixels.
+            if (typeof _refreshPhotoMarkup === 'function') await _refreshPhotoMarkup(pin.photos[pi]);
+          }
         } catch(err) { console.warn('Pin photo P'+pn+String.fromCharCode(65+pi)+' failed:', err.message); failed++; }
         tick();
       }
@@ -37393,7 +38176,12 @@ async function clwRefetchPhotos(baseUrl, newVisitId, onProgress) {
     for (const ph of (iss.photos || [])) {
       try {
         const du = await fetchPhoto('finding_' + iss.id + '_photo_' + n + '.jpg');
-        if (du) { ph.du = du; }
+        if (du) {
+          ph.du = du;
+          // Drive only ever stores the clean original — re-bake any saved
+          // markup on top of the freshly-fetched pixels.
+          if (typeof _refreshPhotoMarkup === 'function') await _refreshPhotoMarkup(ph);
+        }
       } catch(err) { console.warn('Issue photo failed:', err.message); failed++; }
       tick();
       n++;
@@ -37579,4 +38367,32 @@ window.addEventListener('error', function(ev){
 window.addEventListener('unhandledrejection', function(ev){
   console.error('Unhandled promise rejection:', ev.reason);
   if (typeof toast === 'function') {
-    toast('⚠ Something went wrong. Please try again — if this keeps ha
+    toast('⚠ Something went wrong. Please try again — if this keeps happening, reload the app.', 6000);
+  }
+});
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     CLW PATCH v5 — Offline app-shell caching (Service Worker)
+     Makes the app load instantly from a local cache even with zero
+     signal (e.g. deep in a basement), by having the browser store a
+     copy of this page the first time it's opened with a connection,
+     then quietly refreshing that copy in the background whenever a
+     connection is available. Does not affect Drive sync, PDF upload,
+     or any saved visit data — those still require their own connection
+     as normal; this only protects the app shell itself from failing
+     to (re)load after the browser discards a background tab.
+     Requires the app to be opened via its web address (not a local
+     file) — see service-worker.js in the same folder.
+══════════════════════════════════════════════════════════ -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./service-worker.js').catch(function(err){
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
